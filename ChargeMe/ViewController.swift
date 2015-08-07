@@ -13,6 +13,7 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // Get Device Battery Level
         var x = UIDevice.currentDevice().batteryLevel
         
         
