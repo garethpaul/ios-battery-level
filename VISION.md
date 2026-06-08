@@ -37,7 +37,6 @@ Canonical security policy and reporting:
 
 - [`SECURITY.md`](SECURITY.md)
 
-
 Battery state and device details should remain local diagnostic data. Do not add
 network reporting, analytics, or persistent device profiling.
 
