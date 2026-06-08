@@ -28,6 +28,8 @@ Helpful reports include:
 - Review found network clients, sockets, web APIs, or service endpoints; changes in those areas should receive security-focused review before merge.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - No primary dependency manifest was detected in the repository root. If dependencies are added later, include a manifest and prefer reproducible installation instructions.
+- Battery and device state can become privacy-sensitive when logged, persisted, correlated, or transmitted. Keep the sample local-only unless a future change documents consent, retention, and data flow.
+- `make check` runs a static baseline that guards plist/storyboard metadata, Xcode project wiring, source inventory, battery-monitoring behavior, and logging/network regressions when Xcode is unavailable.
 
 ## Mobile Privacy Notes
 

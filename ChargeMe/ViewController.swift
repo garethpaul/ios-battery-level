@@ -14,7 +14,10 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         // Get Device Battery Level
-        var x = UIDevice.currentDevice().batteryLevel
+        let device = UIDevice.currentDevice()
+        device.batteryMonitoringEnabled = true
+        let batteryLevel = device.batteryLevel
+        _ = batteryLevel
         
         
         // Do any additional setup after loading the view, typically from a nib.
@@ -27,4 +30,3 @@ class ViewController: UIViewController {
 
 
 }
-

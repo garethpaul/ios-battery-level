@@ -19,11 +19,11 @@ Priority:
 - Keep the Xcode project easy to inspect
 - Avoid adding analytics or network reporting of device state
 - Maintain security policy for the sample
+- Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
+  local-only device state, plist/storyboard XML, Xcode metadata, and source inventory
 
 Next priorities:
 
-- Add README setup and verification notes
-- Enable and document battery monitoring if needed for accurate readings
 - Add a small UI or testable wrapper only if it improves the sample
 - Modernize Swift/project settings in a dedicated pass
 
@@ -42,6 +42,11 @@ Canonical security policy and reporting:
 
 Battery state and device details should remain local diagnostic data. Do not add
 network reporting, analytics, or persistent device profiling.
+
+Current baseline: `make check` runs `scripts/check-baseline.py` without Xcode.
+It verifies that battery monitoring is enabled before reading battery level and
+that battery/device state remains local-only with no logging, network reporting,
+upload, analytics, or persistence behavior.
 
 ## What We Will Not Merge (For Now)
 

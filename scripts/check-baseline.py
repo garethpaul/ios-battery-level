@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import plistlib
+import re
+import shutil
+import sys
+import xml.etree.ElementTree as ET
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PLAN = ROOT / "docs/plans/2026-06-08-ios-battery-baseline.md"
+
+
+def require(condition, message, failures):
+    if not condition:
+        failures.append(message)
+
+
+def read(relative_path):
+    return (ROOT / relative_path).read_text(encoding="utf-8", errors="replace")
+
+
+def strip_swift_line_comments(text):
+    return "\n".join(line.split("//", 1)[0] for line in text.splitlines())
+
+
+def parse_xml(relative_path, failures):
+    try:
+        ET.parse(str(ROOT / relative_path))
+    except ET.ParseError as error:
+        failures.append(f"{relative_path} is not well-formed XML: {error}")
+
+
+def parse_plist(relative_path, failures):
+    try:
+        with (ROOT / relative_path).open("rb") as file:
+            return plistlib.load(file)
+    except Exception as error:
+        failures.append(f"{relative_path} is not a readable plist: {error}")
+        return {}
+
+
+def main():
+    failures = []
+    required_files = [
+        ".gitignore",
+        "CHANGES.md",
+        "Makefile",
+        "README.md",
+        "SECURITY.md",
+        "VISION.md",
+        "ChargeMe.xcodeproj/project.pbxproj",
+        "ChargeMe.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+        "ChargeMe/Info.plist",
+        "ChargeMe/AppDelegate.swift",
+        "ChargeMe/ViewController.swift",
+        "ChargeMeTests/ChargeMeTests.swift",
+        "ChargeMeTests/Info.plist",
+        "docs/plans/2026-06-08-ios-battery-baseline.md",
+        "docs/readme-overview.svg",
+    ]
+
+    for relative_path in required_files:
+        require((ROOT / relative_path).is_file(), f"Required file missing: {relative_path}", failures)
+
+    for xml_file in [
+        "ChargeMe.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+        "ChargeMe/Base.lproj/Main.storyboard",
+        "ChargeMe/Base.lproj/LaunchScreen.xib",
+        "docs/readme-overview.svg",
+    ]:
+        parse_xml(xml_file, failures)
+
+    app_plist = parse_plist("ChargeMe/Info.plist", failures)
+    test_plist = parse_plist("ChargeMeTests/Info.plist", failures)
+    project = read("ChargeMe.xcodeproj/project.pbxproj")
+    view_controller = read("ChargeMe/ViewController.swift")
+    active_sources = "\n".join([
+        strip_swift_line_comments(read("ChargeMe/AppDelegate.swift")),
+        strip_swift_line_comments(view_controller),
+        strip_swift_line_comments(read("ChargeMeTests/ChargeMeTests.swift")),
+    ])
+    readme = read("README.md")
+    vision = read("VISION.md")
+    security = read("SECURITY.md")
+    changes = read("CHANGES.md")
+    gitignore = read(".gitignore")
+    plan = PLAN.read_text(encoding="utf-8") if PLAN.exists() else ""
+
+    require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
+            "ChargeMe Info.plist must keep the expected sample bundle identifier",
+            failures)
+    require(test_plist.get("CFBundlePackageType") == "BNDL",
+            "ChargeMeTests Info.plist must remain a test bundle plist",
+            failures)
+    require("IPHONEOS_DEPLOYMENT_TARGET = 8.3;" in project and "INFOPLIST_FILE = ChargeMe/Info.plist;" in project,
+            "Xcode project must preserve the legacy iOS deployment and plist wiring",
+            failures)
+    require("Pods" not in project and not (ROOT / "Podfile").exists(),
+            "Battery sample must stay dependency-free unless dependencies are explicitly documented",
+            failures)
+
+    require("UIDevice.currentDevice()" in view_controller and ".batteryLevel" in view_controller,
+            "ViewController must retain the UIDevice battery-level sample",
+            failures)
+    require("batteryMonitoringEnabled = true" in view_controller,
+            "ViewController must enable battery monitoring before reading batteryLevel",
+            failures)
+    require("let batteryLevel = device.batteryLevel" in view_controller and "_ = batteryLevel" in view_controller,
+            "ViewController must keep battery-level reads explicit without unused-variable warnings",
+            failures)
+    require(not re.search(r"\b(?:print|println|NSLog)\s*\(", active_sources),
+            "Battery/device state must not be logged",
+            failures)
+    for forbidden in ["NSURL", "URLSession", "NSURLConnection", "http://", "https://", "upload", "analytics"]:
+        require(forbidden not in active_sources,
+                f"Battery sample must not add network, upload, or analytics behavior: {forbidden}",
+                failures)
+
+    swift_files = sorted((ROOT / "ChargeMe").rglob("*.swift")) + sorted((ROOT / "ChargeMeTests").rglob("*.swift"))
+    require(len(swift_files) >= 3,
+            "expected Swift source/test inventory is missing",
+            failures)
+    require("*.local.xcconfig" in gitignore and ".env" in gitignore and "DerivedData" in gitignore,
+            ".gitignore must exclude local config and Xcode build products",
+            failures)
+    require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme,
+            "README must document static verification, project usage, and battery monitoring",
+            failures)
+    require("local-only" in readme.lower() and "battery" in readme.lower(),
+            "README must document local-only battery data expectations",
+            failures)
+    require("scripts/check-baseline.py" in vision and "local-only" in vision.lower(),
+            "VISION must describe the current static privacy baseline",
+            failures)
+    require("battery" in security.lower() and "make check" in security,
+            "SECURITY must document battery/device-state privacy and the static baseline",
+            failures)
+    require("battery monitoring" in changes.lower() and "make check" in changes,
+            "CHANGES must record the battery monitoring fix and baseline",
+            failures)
+    require("status: completed" in plan,
+            "plan must be marked completed",
+            failures)
+
+    if shutil.which("xcodebuild"):
+        print("xcodebuild is available; run a scheme-specific Xcode test on macOS before release.")
+    else:
+        print("xcodebuild unavailable; static iOS baseline only.")
+
+    if failures:
+        for failure in failures:
+            print(failure, file=sys.stderr)
+        return 1
+
+    print("ios-battery-level baseline checks passed.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
