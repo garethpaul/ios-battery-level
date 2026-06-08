@@ -36,7 +36,7 @@ Contribution rules:
 Battery state and device details should remain local diagnostic data. Do not add
 network reporting, analytics, or persistent device profiling.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Telemetry around battery or device state
 - Broad app features unrelated to battery APIs
