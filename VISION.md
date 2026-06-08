@@ -42,3 +42,6 @@ network reporting, analytics, or persistent device profiling.
 - Broad app features unrelated to battery APIs
 - Project migration mixed with behavior changes
 - Generated signing material
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.
