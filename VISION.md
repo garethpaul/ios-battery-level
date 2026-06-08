@@ -1,5 +1,8 @@
 ## iOS Battery Level Vision
 
+This document explains the current state and direction of the project.
+Project overview and developer docs: [`README.md`](README.md)
+
 iOS Battery Level is a small Swift sample for reading device battery level.
 
 The repository is useful as a minimal iOS project for experimenting with
