@@ -12,15 +12,19 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        // Get Device Battery Level
+
+        _ = self.readBatteryLevel()
+
+        // Do any additional setup after loading the view, typically from a nib.
+    }
+
+    func readBatteryLevel() -> Float {
         let device = UIDevice.currentDevice()
+        let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled
         device.batteryMonitoringEnabled = true
         let batteryLevel = device.batteryLevel
-        _ = batteryLevel
-        
-        
-        // Do any additional setup after loading the view, typically from a nib.
+        device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled
+        return batteryLevel
     }
 
     override func didReceiveMemoryWarning() {

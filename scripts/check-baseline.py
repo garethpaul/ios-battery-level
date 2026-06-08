@@ -8,7 +8,8 @@ import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs/plans/2026-06-08-ios-battery-baseline.md"
+BASELINE_PLAN = ROOT / "docs/plans/2026-06-08-ios-battery-baseline.md"
+LIFECYCLE_PLAN = ROOT / "docs/plans/2026-06-08-battery-monitoring-lifecycle.md"
 
 
 def require(condition, message, failures):
@@ -22,6 +23,16 @@ def read(relative_path):
 
 def strip_swift_line_comments(text):
     return "\n".join(line.split("//", 1)[0] for line in text.splitlines())
+
+
+def require_order(text, tokens, message, failures):
+    position = -1
+    for token in tokens:
+        next_position = text.find(token, position + 1)
+        if next_position == -1:
+            failures.append(message)
+            return
+        position = next_position
 
 
 def parse_xml(relative_path, failures):
@@ -57,6 +68,7 @@ def main():
         "ChargeMeTests/ChargeMeTests.swift",
         "ChargeMeTests/Info.plist",
         "docs/plans/2026-06-08-ios-battery-baseline.md",
+        "docs/plans/2026-06-08-battery-monitoring-lifecycle.md",
         "docs/readme-overview.svg",
     ]
 
@@ -85,7 +97,8 @@ def main():
     security = read("SECURITY.md")
     changes = read("CHANGES.md")
     gitignore = read(".gitignore")
-    plan = PLAN.read_text(encoding="utf-8") if PLAN.exists() else ""
+    baseline_plan = BASELINE_PLAN.read_text(encoding="utf-8") if BASELINE_PLAN.exists() else ""
+    lifecycle_plan = LIFECYCLE_PLAN.read_text(encoding="utf-8") if LIFECYCLE_PLAN.exists() else ""
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -106,9 +119,21 @@ def main():
     require("batteryMonitoringEnabled = true" in view_controller,
             "ViewController must enable battery monitoring before reading batteryLevel",
             failures)
-    require("let batteryLevel = device.batteryLevel" in view_controller and "_ = batteryLevel" in view_controller,
-            "ViewController must keep battery-level reads explicit without unused-variable warnings",
+    require("func readBatteryLevel() -> Float" in view_controller and "_ = self.readBatteryLevel()" in view_controller,
+            "ViewController must keep battery reads in an explicit helper invoked from viewDidLoad",
             failures)
+    require_order(
+        view_controller,
+        [
+            "let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled",
+            "device.batteryMonitoringEnabled = true",
+            "let batteryLevel = device.batteryLevel",
+            "device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled",
+            "return batteryLevel",
+        ],
+        "ViewController must restore the prior batteryMonitoringEnabled state after reading batteryLevel",
+        failures,
+    )
     require(not re.search(r"\b(?:print|println|NSLog)\s*\(", active_sources),
             "Battery/device state must not be logged",
             failures)
@@ -124,8 +149,8 @@ def main():
     require("*.local.xcconfig" in gitignore and ".env" in gitignore and "DerivedData" in gitignore,
             ".gitignore must exclude local config and Xcode build products",
             failures)
-    require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme,
-            "README must document static verification, project usage, and battery monitoring",
+    require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and "restore" in readme.lower(),
+            "README must document static verification, project usage, and battery monitoring restoration",
             failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
@@ -136,11 +161,11 @@ def main():
     require("battery" in security.lower() and "make check" in security,
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
-    require("battery monitoring" in changes.lower() and "make check" in changes,
-            "CHANGES must record the battery monitoring fix and baseline",
+    require("battery monitoring" in changes.lower() and "make check" in changes and "restores" in changes,
+            "CHANGES must record the battery monitoring fix, restoration, and baseline",
             failures)
-    require("status: completed" in plan,
-            "plan must be marked completed",
+    require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan,
+            "plans must be marked completed",
             failures)
 
     if shutil.which("xcodebuild"):

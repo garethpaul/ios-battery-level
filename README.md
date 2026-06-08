@@ -48,7 +48,7 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
 ## Running or Using the Project
 
 - Open `ChargeMe.xcodeproj` in Xcode, choose the app or sample scheme, and run it on the matching simulator/device.
-- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`.
+- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, then restores the previous monitoring state.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
 ## Testing and Verification
@@ -59,7 +59,7 @@ Run the local static baseline:
 make check
 ```
 
-The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory, verifies that battery monitoring is enabled before reading battery level, and guards against logging, network reporting, upload, or analytics behavior.
+The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory, verifies that battery monitoring is enabled before reading battery level and restored afterward, and guards against logging, network reporting, upload, or analytics behavior.
 
 For full legacy verification on macOS, use Xcode's test action or `xcodebuild test` with the appropriate scheme and destination.
 
