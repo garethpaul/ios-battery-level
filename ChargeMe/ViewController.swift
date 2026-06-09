@@ -18,7 +18,7 @@ class ViewController: UIViewController {
         // Do any additional setup after loading the view, typically from a nib.
     }
 
-    func readBatteryLevel() -> Float {
+    func readBatteryLevel() -> Float? {
         let device = UIDevice.currentDevice()
         let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled
         device.batteryMonitoringEnabled = true
@@ -27,6 +27,14 @@ class ViewController: UIViewController {
         }
 
         let batteryLevel = device.batteryLevel
+        return normalizedBatteryLevel(batteryLevel)
+    }
+
+    func normalizedBatteryLevel(batteryLevel: Float) -> Float? {
+        if batteryLevel < 0.0 {
+            return nil
+        }
+
         return batteryLevel
     }
 
