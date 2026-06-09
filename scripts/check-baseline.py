@@ -154,6 +154,7 @@ def main():
     )
     require("testUnknownBatteryLevelReturnsNil" in tests and "XCTAssertNil" in tests and
             "testKnownBatteryLevelIsPreserved" in tests and "XCTAssertEqual" in tests and
+            "testFullBatteryLevelIsPreserved" in tests and
             "testOutOfRangeBatteryLevelReturnsNil" in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
