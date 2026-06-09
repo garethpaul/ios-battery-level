@@ -22,8 +22,11 @@ class ViewController: UIViewController {
         let device = UIDevice.currentDevice()
         let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled
         device.batteryMonitoringEnabled = true
+        defer {
+            device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled
+        }
+
         let batteryLevel = device.batteryLevel
-        device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled
         return batteryLevel
     }
 

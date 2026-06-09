@@ -18,7 +18,7 @@ Priority:
 - Preserve the simple battery-level retrieval example
 - Keep the Xcode project easy to inspect
 - Avoid adding analytics or network reporting of device state
-- Restore battery monitoring state after sample reads
+- Restore battery monitoring state with `defer` after sample reads
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
   local-only device state, plist/storyboard XML, Xcode metadata, and source inventory
@@ -46,7 +46,7 @@ network reporting, analytics, or persistent device profiling.
 
 Current baseline: `make check` runs `scripts/check-baseline.py` without Xcode.
 It verifies that battery monitoring is enabled before reading battery level and
-restored after the read, and that battery/device state remains local-only with
+restored with `defer` after the read, and that battery/device state remains local-only with
 no logging, network reporting, upload, analytics, or persistence behavior.
 
 ## What We Will Not Merge (For Now)

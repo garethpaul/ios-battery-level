@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_PLAN = ROOT / "docs/plans/2026-06-08-ios-battery-baseline.md"
 LIFECYCLE_PLAN = ROOT / "docs/plans/2026-06-08-battery-monitoring-lifecycle.md"
+DEFER_PLAN = ROOT / "docs/plans/2026-06-08-battery-monitoring-defer.md"
 
 
 def require(condition, message, failures):
@@ -69,6 +70,7 @@ def main():
         "ChargeMeTests/Info.plist",
         "docs/plans/2026-06-08-ios-battery-baseline.md",
         "docs/plans/2026-06-08-battery-monitoring-lifecycle.md",
+        "docs/plans/2026-06-08-battery-monitoring-defer.md",
         "docs/readme-overview.svg",
     ]
 
@@ -99,6 +101,7 @@ def main():
     gitignore = read(".gitignore")
     baseline_plan = BASELINE_PLAN.read_text(encoding="utf-8") if BASELINE_PLAN.exists() else ""
     lifecycle_plan = LIFECYCLE_PLAN.read_text(encoding="utf-8") if LIFECYCLE_PLAN.exists() else ""
+    defer_plan = DEFER_PLAN.read_text(encoding="utf-8") if DEFER_PLAN.exists() else ""
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -127,11 +130,12 @@ def main():
         [
             "let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled",
             "device.batteryMonitoringEnabled = true",
-            "let batteryLevel = device.batteryLevel",
+            "defer {",
             "device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled",
+            "let batteryLevel = device.batteryLevel",
             "return batteryLevel",
         ],
-        "ViewController must restore the prior batteryMonitoringEnabled state after reading batteryLevel",
+        "ViewController must restore the prior batteryMonitoringEnabled state with defer after reading batteryLevel",
         failures,
     )
     require(not re.search(r"\b(?:print|println|NSLog)\s*\(", active_sources),
@@ -149,22 +153,25 @@ def main():
     require("*.local.xcconfig" in gitignore and ".env" in gitignore and "DerivedData" in gitignore,
             ".gitignore must exclude local config and Xcode build products",
             failures)
-    require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and "restore" in readme.lower(),
-            "README must document static verification, project usage, and battery monitoring restoration",
+    require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
+            "restore" in readme.lower() and "defer" in readme.lower(),
+            "README must document static verification, project usage, and deferred battery monitoring restoration",
             failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
-    require("scripts/check-baseline.py" in vision and "local-only" in vision.lower(),
+    require("scripts/check-baseline.py" in vision and "local-only" in vision.lower() and "defer" in vision.lower(),
             "VISION must describe the current static privacy baseline",
             failures)
     require("battery" in security.lower() and "make check" in security,
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
-    require("battery monitoring" in changes.lower() and "make check" in changes and "restores" in changes,
-            "CHANGES must record the battery monitoring fix, restoration, and baseline",
+    require("battery monitoring" in changes.lower() and "make check" in changes and "restores" in changes and
+            "defer" in changes.lower(),
+            "CHANGES must record the battery monitoring fix, deferred restoration, and baseline",
             failures)
-    require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan,
+    require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
+            "status: completed" in defer_plan,
             "plans must be marked completed",
             failures)
 
