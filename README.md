@@ -40,6 +40,9 @@ Additional scan context:
 ```bash
 git clone https://github.com/garethpaul/ios-battery-level.git
 cd ios-battery-level
+make lint
+make test
+make build
 make check
 ```
 
@@ -56,8 +59,15 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
 Run the local static baseline:
 
 ```bash
+make lint
+make test
+make build
 make check
 ```
+
+The `lint`, `test`, and `build` targets intentionally alias the static baseline
+on hosts without the legacy Xcode toolchain, so the standard local gate commands
+stay available while preserving the single source of truth.
 
 The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires focused XCTest assertions for the normalization helper, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
 
@@ -83,7 +93,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-battery-level-upper-bound.md` for the out-of-range battery-level guardrail.
 - See `docs/plans/2026-06-09-nonfinite-battery-level.md` for the non-finite battery-level guardrail.
 - See `docs/plans/2026-06-09-zero-battery-level.md` for the zero battery-level boundary guardrail.
-- Run `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
+- See `docs/plans/2026-06-09-make-gate-aliases.md` for the local gate alias guardrail.
+- Run `make lint`, `make test`, `make build`, and `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 
 ## Contributing
 

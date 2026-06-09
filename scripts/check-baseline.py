@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_PLAN = ROOT / "docs/plans/2026-06-08-ios-battery-baseline.md"
+MAKE_GATES_PLAN = ROOT / "docs/plans/2026-06-09-make-gate-aliases.md"
 LIFECYCLE_PLAN = ROOT / "docs/plans/2026-06-08-battery-monitoring-lifecycle.md"
 DEFER_PLAN = ROOT / "docs/plans/2026-06-08-battery-monitoring-defer.md"
 UNKNOWN_LEVEL_PLAN = ROOT / "docs/plans/2026-06-08-unknown-battery-level.md"
@@ -73,6 +74,7 @@ def main():
         "ChargeMeTests/ChargeMeTests.swift",
         "ChargeMeTests/Info.plist",
         "docs/plans/2026-06-08-ios-battery-baseline.md",
+        "docs/plans/2026-06-09-make-gate-aliases.md",
         "docs/plans/2026-06-08-battery-monitoring-lifecycle.md",
         "docs/plans/2026-06-08-battery-monitoring-defer.md",
         "docs/plans/2026-06-08-unknown-battery-level.md",
@@ -108,7 +110,9 @@ def main():
     security = read("SECURITY.md")
     changes = read("CHANGES.md")
     gitignore = read(".gitignore")
+    makefile = read("Makefile")
     baseline_plan = BASELINE_PLAN.read_text(encoding="utf-8") if BASELINE_PLAN.exists() else ""
+    make_gates_plan = MAKE_GATES_PLAN.read_text(encoding="utf-8") if MAKE_GATES_PLAN.exists() else ""
     lifecycle_plan = LIFECYCLE_PLAN.read_text(encoding="utf-8") if LIFECYCLE_PLAN.exists() else ""
     defer_plan = DEFER_PLAN.read_text(encoding="utf-8") if DEFER_PLAN.exists() else ""
     unknown_level_plan = UNKNOWN_LEVEL_PLAN.read_text(encoding="utf-8") if UNKNOWN_LEVEL_PLAN.exists() else ""
@@ -182,27 +186,33 @@ def main():
     require("*.local.xcconfig" in gitignore and ".env" in gitignore and "DerivedData" in gitignore,
             ".gitignore must exclude local config and Xcode build products",
             failures)
-    require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
+    require(".PHONY: build check lint test" in makefile and "lint test build: check" in makefile,
+            "Makefile must expose lint, test, and build aliases for the local baseline",
+            failures)
+    require("make lint" in readme and "make test" in readme and "make build" in readme and "make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
             "restore" in readme.lower() and "defer" in readme.lower() and "unknown" in readme.lower() and "out-of-range" in readme.lower() and "non-finite" in readme.lower() and "zero" in readme.lower(),
             "README must document static verification, project usage, and deferred battery monitoring restoration",
             failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
-    require("scripts/check-baseline.py" in vision and "local-only" in vision.lower() and
+    require("scripts/check-baseline.py" in vision and "make lint" in vision and "make test" in vision and "make build" in vision and "local-only" in vision.lower() and
             "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower() and "zero" in vision.lower(),
             "VISION must describe the current static privacy baseline",
             failures)
     require("battery" in security.lower() and "make check" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
-    require("battery monitoring" in changes.lower() and "make check" in changes and "restores" in changes and
+    require("battery monitoring" in changes.lower() and "make check" in changes and "make lint" in changes and "make test" in changes and "make build" in changes and "restores" in changes and
             "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower(),
             "CHANGES must record the battery monitoring fix, unknown-level normalization, deferred restoration, and baseline",
             failures)
     require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
             "status: completed" in defer_plan and "status: completed" in unknown_level_plan,
             "plans must be marked completed",
+            failures)
+    require("status: completed" in make_gates_plan,
+            "make gate aliases plan must be marked completed",
             failures)
     require("status: completed" in upper_bound_plan,
             "battery level upper-bound plan must be marked completed",

@@ -25,6 +25,8 @@ Priority:
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
   local-only device state, plist/storyboard XML, Xcode metadata, and source inventory
+- Keep `make lint`, `make test`, `make build`, and `make check` available as
+  local verification gates
 
 Next priorities:
 
@@ -47,12 +49,13 @@ Canonical security policy and reporting:
 Battery state and device details should remain local diagnostic data. Do not add
 network reporting, analytics, or persistent device profiling.
 
-Current baseline: `make check` runs `scripts/check-baseline.py` without Xcode.
-It verifies that battery monitoring is enabled before reading battery level and
-restored with `defer` after the read, that unknown battery levels normalize to
-`nil`, that zero battery levels remain valid, that non-finite or out-of-range
-battery levels are rejected, and that battery/device state remains local-only
-with no logging, network reporting, upload, analytics, or persistence behavior.
+Current baseline: `make lint`, `make test`, `make build`, and `make check` run
+`scripts/check-baseline.py` without Xcode. It verifies that battery monitoring
+is enabled before reading battery level and restored with `defer` after the
+read, that unknown battery levels normalize to `nil`, that zero battery levels
+remain valid, that non-finite or out-of-range battery levels are rejected, and
+that battery/device state remains local-only with no logging, network
+reporting, upload, analytics, or persistence behavior.
 
 ## What We Will Not Merge (For Now)
 
