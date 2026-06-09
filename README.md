@@ -48,7 +48,7 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
 ## Running or Using the Project
 
 - Open `ChargeMe.xcodeproj` in Xcode, choose the app or sample scheme, and run it on the matching simulator/device.
-- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, normalizes unknown negative or out-of-range levels to `nil`, then uses `defer` to restore the previous monitoring state.
+- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, normalizes unknown, non-finite, or out-of-range levels to `nil`, then uses `defer` to restore the previous monitoring state.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
 ## Testing and Verification
@@ -59,7 +59,7 @@ Run the local static baseline:
 make check
 ```
 
-The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms unknown or out-of-range levels normalize to `nil`, requires focused XCTest assertions for the normalization helper, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
+The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires focused XCTest assertions for the normalization helper, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
 
 For full legacy verification on macOS, use Xcode's test action or `xcodebuild test` with the appropriate scheme and destination.
 
@@ -81,6 +81,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-09-battery-level-upper-bound.md` for the out-of-range battery-level guardrail.
+- See `docs/plans/2026-06-09-nonfinite-battery-level.md` for the non-finite battery-level guardrail.
 - Run `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 
 ## Contributing

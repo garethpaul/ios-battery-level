@@ -32,4 +32,10 @@ class ChargeMeTests: XCTestCase {
         XCTAssertNil(controller.normalizedBatteryLevel(1.5), "Battery levels above 100% should not be treated as percentages")
     }
 
+    func testNaNBatteryLevelReturnsNil() {
+        let controller = ViewController()
+        let notANumber = Float(0.0) / Float(0.0)
+        XCTAssertNil(controller.normalizedBatteryLevel(notANumber), "Non-finite battery levels should not be treated as percentages")
+    }
+
 }

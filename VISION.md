@@ -19,6 +19,7 @@ Priority:
 - Keep the Xcode project easy to inspect
 - Avoid adding analytics or network reporting of device state
 - Treat unknown battery-level readings as absent values instead of percentages
+- Treat non-finite battery-level readings as absent values
 - Restore battery monitoring state with `defer` after sample reads
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
@@ -48,9 +49,9 @@ network reporting, analytics, or persistent device profiling.
 Current baseline: `make check` runs `scripts/check-baseline.py` without Xcode.
 It verifies that battery monitoring is enabled before reading battery level and
 restored with `defer` after the read, that unknown battery levels normalize to
-`nil`, that out-of-range battery levels are rejected, and that battery/device
-state remains local-only with no logging, network reporting, upload, analytics,
-or persistence behavior.
+`nil`, that non-finite or out-of-range battery levels are rejected, and that
+battery/device state remains local-only with no logging, network reporting,
+upload, analytics, or persistence behavior.
 
 ## What We Will Not Merge (For Now)
 
