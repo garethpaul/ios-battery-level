@@ -31,7 +31,7 @@ class ViewController: UIViewController {
     }
 
     func normalizedBatteryLevel(batteryLevel: Float) -> Float? {
-        if batteryLevel < 0.0 {
+        if batteryLevel < 0.0 || batteryLevel > 1.0 {
             return nil
         }
 
