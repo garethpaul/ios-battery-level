@@ -43,4 +43,19 @@ class ChargeMeTests: XCTestCase {
         XCTAssertNil(controller.normalizedBatteryLevel(notANumber), "Non-finite battery levels should not be treated as percentages")
     }
 
+    func testBatteryLevelTextShowsKnownPercentage() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.batteryLevelText(0.75), "Battery Level: 75%", "Known battery levels should be formatted as percentages")
+    }
+
+    func testBatteryLevelTextShowsZeroPercentage() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.batteryLevelText(0.0), "Battery Level: 0%", "Zero battery level should be shown as a valid percentage")
+    }
+
+    func testBatteryLevelTextShowsUnknownWhenMissing() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.batteryLevelText(nil), "Battery Level: Unknown", "Unknown battery levels should be visible without inventing a percentage")
+    }
+
 }

@@ -21,6 +21,8 @@ Priority:
 - Treat unknown battery-level readings as absent values instead of percentages
 - Preserve zero battery-level readings as valid percentages
 - Treat non-finite battery-level readings as absent values
+- Keep battery readings visible in the sample UI without adding persistence or
+  reporting
 - Restore battery monitoring state with `defer` after sample reads
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
@@ -54,8 +56,9 @@ Current baseline: `make lint`, `make test`, `make build`, and `make check` run
 is enabled before reading battery level and restored with `defer` after the
 read, that unknown battery levels normalize to `nil`, that zero battery levels
 remain valid, that non-finite or out-of-range battery levels are rejected, and
-that battery/device state remains local-only with no logging, network
-reporting, upload, analytics, or persistence behavior.
+that the visible display helper shows known and unknown readings while
+battery/device state remains local-only with no logging, network reporting,
+upload, analytics, or persistence behavior.
 
 ## What We Will Not Merge (For Now)
 

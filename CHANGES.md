@@ -6,6 +6,8 @@
   static battery sample baseline.
 - Added a zero battery-level boundary assertion so `0.0` remains a valid
   normalized percentage.
+- Added a visible local battery-level label with formatter coverage for known
+  and unknown readings.
 
 ## 2026-06-08
 
