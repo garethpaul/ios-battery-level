@@ -22,6 +22,11 @@ class ChargeMeTests: XCTestCase {
         XCTAssertEqual(controller.normalizedBatteryLevel(0.75)!, 0.75, "Known battery levels should be preserved")
     }
 
+    func testZeroBatteryLevelIsPreserved() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.normalizedBatteryLevel(0.0)!, 0.0, "An empty battery should remain a valid percentage")
+    }
+
     func testFullBatteryLevelIsPreserved() {
         let controller = ViewController()
         XCTAssertEqual(controller.normalizedBatteryLevel(1.0)!, 1.0, "A full battery should remain a valid percentage")

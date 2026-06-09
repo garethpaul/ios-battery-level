@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-09
+
+- Added a zero battery-level boundary assertion so `0.0` remains a valid
+  normalized percentage.
+
 ## 2026-06-08
 
 - Enabled battery monitoring before reading `UIDevice.batteryLevel`.

@@ -14,6 +14,7 @@ DEFER_PLAN = ROOT / "docs/plans/2026-06-08-battery-monitoring-defer.md"
 UNKNOWN_LEVEL_PLAN = ROOT / "docs/plans/2026-06-08-unknown-battery-level.md"
 UPPER_BOUND_PLAN = ROOT / "docs/plans/2026-06-09-battery-level-upper-bound.md"
 NONFINITE_PLAN = ROOT / "docs/plans/2026-06-09-nonfinite-battery-level.md"
+ZERO_LEVEL_PLAN = ROOT / "docs/plans/2026-06-09-zero-battery-level.md"
 
 
 def require(condition, message, failures):
@@ -77,6 +78,7 @@ def main():
         "docs/plans/2026-06-08-unknown-battery-level.md",
         "docs/plans/2026-06-09-battery-level-upper-bound.md",
         "docs/plans/2026-06-09-nonfinite-battery-level.md",
+        "docs/plans/2026-06-09-zero-battery-level.md",
         "docs/readme-overview.svg",
     ]
 
@@ -112,6 +114,7 @@ def main():
     unknown_level_plan = UNKNOWN_LEVEL_PLAN.read_text(encoding="utf-8") if UNKNOWN_LEVEL_PLAN.exists() else ""
     upper_bound_plan = UPPER_BOUND_PLAN.read_text(encoding="utf-8") if UPPER_BOUND_PLAN.exists() else ""
     nonfinite_plan = NONFINITE_PLAN.read_text(encoding="utf-8") if NONFINITE_PLAN.exists() else ""
+    zero_level_plan = ZERO_LEVEL_PLAN.read_text(encoding="utf-8") if ZERO_LEVEL_PLAN.exists() else ""
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -157,6 +160,7 @@ def main():
     )
     require("testUnknownBatteryLevelReturnsNil" in tests and "XCTAssertNil" in tests and
             "testKnownBatteryLevelIsPreserved" in tests and "XCTAssertEqual" in tests and
+            "testZeroBatteryLevelIsPreserved" in tests and "normalizedBatteryLevel(0.0)" in tests and
             "testFullBatteryLevelIsPreserved" in tests and
             "testOutOfRangeBatteryLevelReturnsNil" in tests and
             "testNaNBatteryLevelReturnsNil" in tests and
@@ -179,21 +183,21 @@ def main():
             ".gitignore must exclude local config and Xcode build products",
             failures)
     require("make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
-            "restore" in readme.lower() and "defer" in readme.lower() and "unknown" in readme.lower() and "out-of-range" in readme.lower() and "non-finite" in readme.lower(),
+            "restore" in readme.lower() and "defer" in readme.lower() and "unknown" in readme.lower() and "out-of-range" in readme.lower() and "non-finite" in readme.lower() and "zero" in readme.lower(),
             "README must document static verification, project usage, and deferred battery monitoring restoration",
             failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
     require("scripts/check-baseline.py" in vision and "local-only" in vision.lower() and
-            "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower(),
+            "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower() and "zero" in vision.lower(),
             "VISION must describe the current static privacy baseline",
             failures)
-    require("battery" in security.lower() and "make check" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower(),
+    require("battery" in security.lower() and "make check" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
     require("battery monitoring" in changes.lower() and "make check" in changes and "restores" in changes and
-            "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower(),
+            "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower(),
             "CHANGES must record the battery monitoring fix, unknown-level normalization, deferred restoration, and baseline",
             failures)
     require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
@@ -205,6 +209,9 @@ def main():
             failures)
     require("status: completed" in nonfinite_plan,
             "non-finite battery level plan must be marked completed",
+            failures)
+    require("status: completed" in zero_level_plan,
+            "zero battery level plan must be marked completed",
             failures)
 
     if shutil.which("xcodebuild"):
