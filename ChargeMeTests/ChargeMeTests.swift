@@ -58,4 +58,19 @@ class ChargeMeTests: XCTestCase {
         XCTAssertEqual(controller.batteryLevelText(nil), "Battery Level: Unknown", "Unknown battery levels should be visible without inventing a percentage")
     }
 
+    func testBatteryLevelAccessibilityValueShowsKnownPercentage() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.batteryLevelAccessibilityValue(0.75), "75%", "Known battery levels should be exposed as accessibility values")
+    }
+
+    func testBatteryLevelAccessibilityValueShowsZeroPercentage() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.batteryLevelAccessibilityValue(0.0), "0%", "Zero battery level should remain a valid accessibility value")
+    }
+
+    func testBatteryLevelAccessibilityValueShowsUnknownWhenMissing() {
+        let controller = ViewController()
+        XCTAssertEqual(controller.batteryLevelAccessibilityValue(nil), "Unknown", "Unknown battery levels should be exposed without inventing a percentage")
+    }
+
 }

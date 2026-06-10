@@ -51,7 +51,7 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
 ## Running or Using the Project
 
 - Open `ChargeMe.xcodeproj` in Xcode, choose the app or sample scheme, and run it on the matching simulator/device.
-- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, preserves zero and other valid levels, normalizes unknown, non-finite, or out-of-range levels to `nil`, shows the value in a visible local label such as `Battery Level: Unknown`, then uses `defer` to restore the previous monitoring state.
+- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, preserves zero and other valid levels, normalizes unknown, non-finite, or out-of-range levels to `nil`, shows the value in a visible local label such as `Battery Level: Unknown`, exposes the current reading as an accessibility value, then uses `defer` to restore the previous monitoring state.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
 ## Testing and Verification
@@ -69,7 +69,7 @@ The `lint`, `test`, and `build` targets intentionally alias the static baseline
 on hosts without the legacy Xcode toolchain, so the standard local gate commands
 stay available while preserving the single source of truth.
 
-The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
+The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label, accessibility value, and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
 
 For full legacy verification on macOS, use Xcode's test action or `xcodebuild test` with the appropriate scheme and destination.
 
@@ -94,6 +94,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-nonfinite-battery-level.md` for the non-finite battery-level guardrail.
 - See `docs/plans/2026-06-09-zero-battery-level.md` for the zero battery-level boundary guardrail.
 - See `docs/plans/2026-06-09-visible-battery-level.md` for the visible local battery-level display guardrail.
+- See `docs/plans/2026-06-09-battery-accessibility-value.md` for the battery
+  accessibility value guardrail.
 - See `docs/plans/2026-06-09-make-gate-aliases.md` for the local gate alias guardrail.
 - Run `make lint`, `make test`, `make build`, and `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 

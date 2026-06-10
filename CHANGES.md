@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Added an accessibility value for the visible battery-level label so known,
+  zero, and unknown readings are exposed to assistive technologies.
 - Added local `make lint`, `make test`, and `make build` gate aliases for the
   static battery sample baseline.
 - Added a zero battery-level boundary assertion so `0.0` remains a valid

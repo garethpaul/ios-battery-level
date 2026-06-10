@@ -23,6 +23,7 @@ Priority:
 - Treat non-finite battery-level readings as absent values
 - Keep battery readings visible in the sample UI without adding persistence or
   reporting
+- Keep the visible battery reading exposed as an accessibility value
 - Restore battery monitoring state with `defer` after sample reads
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
@@ -57,8 +58,9 @@ is enabled before reading battery level and restored with `defer` after the
 read, that unknown battery levels normalize to `nil`, that zero battery levels
 remain valid, that non-finite or out-of-range battery levels are rejected, and
 that the visible display helper shows known and unknown readings while
-battery/device state remains local-only with no logging, network reporting,
-upload, analytics, or persistence behavior.
+battery accessibility values expose known and unknown readings. Battery/device
+state remains local-only with no logging, network reporting, upload, analytics,
+or persistence behavior.
 
 ## What We Will Not Merge (For Now)
 

@@ -17,6 +17,7 @@ UPPER_BOUND_PLAN = ROOT / "docs/plans/2026-06-09-battery-level-upper-bound.md"
 NONFINITE_PLAN = ROOT / "docs/plans/2026-06-09-nonfinite-battery-level.md"
 ZERO_LEVEL_PLAN = ROOT / "docs/plans/2026-06-09-zero-battery-level.md"
 DISPLAY_PLAN = ROOT / "docs/plans/2026-06-09-visible-battery-level.md"
+ACCESSIBILITY_VALUE_PLAN = ROOT / "docs/plans/2026-06-09-battery-accessibility-value.md"
 
 
 def require(condition, message, failures):
@@ -83,6 +84,7 @@ def main():
         "docs/plans/2026-06-09-nonfinite-battery-level.md",
         "docs/plans/2026-06-09-zero-battery-level.md",
         "docs/plans/2026-06-09-visible-battery-level.md",
+        "docs/plans/2026-06-09-battery-accessibility-value.md",
         "docs/readme-overview.svg",
     ]
 
@@ -122,6 +124,7 @@ def main():
     nonfinite_plan = NONFINITE_PLAN.read_text(encoding="utf-8") if NONFINITE_PLAN.exists() else ""
     zero_level_plan = ZERO_LEVEL_PLAN.read_text(encoding="utf-8") if ZERO_LEVEL_PLAN.exists() else ""
     display_plan = DISPLAY_PLAN.read_text(encoding="utf-8") if DISPLAY_PLAN.exists() else ""
+    accessibility_value_plan = ACCESSIBILITY_VALUE_PLAN.read_text(encoding="utf-8") if ACCESSIBILITY_VALUE_PLAN.exists() else ""
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -155,13 +158,19 @@ def main():
             "ViewController must expose a local visible battery-level label",
             failures)
     require("func displayBatteryLevel(batteryLevel: Float?)" in view_controller and
-            "batteryLevelLabel.text = batteryLevelText(batteryLevel)" in view_controller,
+            "batteryLevelLabel.text = batteryLevelText(batteryLevel)" in view_controller and
+            "batteryLevelLabel.accessibilityValue = batteryLevelAccessibilityValue(batteryLevel)" in view_controller,
             "ViewController must display battery readings through the formatter",
             failures)
     require("func batteryLevelText(batteryLevel: Float?) -> String" in view_controller and
             "Battery Level: Unknown" in view_controller and
             'String(format: "Battery Level: %.0f%%"' in view_controller,
             "ViewController must format known and unknown battery levels for display",
+            failures)
+    require("func batteryLevelAccessibilityValue(batteryLevel: Float?) -> String" in view_controller and
+            'return "Unknown"' in view_controller and
+            'String(format: "%.0f%%"' in view_controller,
+            "ViewController must expose known and unknown battery levels as accessibility values",
             failures)
     require_order(
         view_controller,
@@ -201,6 +210,11 @@ def main():
             "Battery Level: 0%" in tests and
             "testBatteryLevelTextShowsUnknownWhenMissing" in tests and
             "Battery Level: Unknown" in tests and
+            "testBatteryLevelAccessibilityValueShowsKnownPercentage" in tests and
+            '"75%"' in tests and
+            "testBatteryLevelAccessibilityValueShowsZeroPercentage" in tests and
+            '"0%"' in tests and
+            "testBatteryLevelAccessibilityValueShowsUnknownWhenMissing" in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
             failures)
@@ -226,21 +240,21 @@ def main():
             "restore" in readme.lower() and "defer" in readme.lower() and "unknown" in readme.lower() and "out-of-range" in readme.lower() and "non-finite" in readme.lower() and "zero" in readme.lower(),
             "README must document static verification, project usage, and deferred battery monitoring restoration",
             failures)
-    require("visible" in readme.lower() and "Battery Level: Unknown" in readme,
+    require("visible" in readme.lower() and "Battery Level: Unknown" in readme and "accessibility value" in readme.lower(),
             "README must document visible battery-level display behavior",
             failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
     require("scripts/check-baseline.py" in vision and "make lint" in vision and "make test" in vision and "make build" in vision and "local-only" in vision.lower() and
-            "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower() and "zero" in vision.lower() and "visible" in vision.lower(),
+            "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower() and "zero" in vision.lower() and "visible" in vision.lower() and "accessibility value" in vision.lower(),
             "VISION must describe the current static privacy baseline",
             failures)
-    require("battery" in security.lower() and "make check" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower(),
+    require("battery" in security.lower() and "make check" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower() and "accessibility value" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
     require("battery monitoring" in changes.lower() and "make check" in changes and "make lint" in changes and "make test" in changes and "make build" in changes and "restores" in changes and
-            "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower() and "visible" in changes.lower(),
+            "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower() and "visible" in changes.lower() and "accessibility value" in changes.lower(),
             "CHANGES must record the battery monitoring fix, unknown-level normalization, deferred restoration, and baseline",
             failures)
     require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
@@ -261,6 +275,9 @@ def main():
             failures)
     require("status: completed" in display_plan,
             "visible battery-level plan must be marked completed",
+            failures)
+    require("status: completed" in accessibility_value_plan,
+            "battery accessibility value plan must be marked completed",
             failures)
 
     if shutil.which("xcodebuild"):

@@ -46,6 +46,7 @@ class ViewController: UIViewController {
 
     func displayBatteryLevel(batteryLevel: Float?) {
         batteryLevelLabel.text = batteryLevelText(batteryLevel)
+        batteryLevelLabel.accessibilityValue = batteryLevelAccessibilityValue(batteryLevel)
     }
 
     func batteryLevelText(batteryLevel: Float?) -> String {
@@ -54,6 +55,14 @@ class ViewController: UIViewController {
         }
 
         return String(format: "Battery Level: %.0f%%", Double(batteryLevel * 100.0))
+    }
+
+    func batteryLevelAccessibilityValue(batteryLevel: Float?) -> String {
+        guard let batteryLevel = batteryLevel else {
+            return "Unknown"
+        }
+
+        return String(format: "%.0f%%", Double(batteryLevel * 100.0))
     }
 
     func normalizedBatteryLevel(batteryLevel: Float) -> Float? {
