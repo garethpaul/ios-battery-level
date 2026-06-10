@@ -30,6 +30,8 @@ Priority:
   local-only device state, plist/storyboard XML, Xcode metadata, and source inventory
 - Keep `make lint`, `make test`, `make build`, and `make check` available as
   local verification gates
+- Keep pinned macOS CI parsing `ChargeMe.xcodeproj` through the canonical
+  `make check` gate
 
 Next priorities:
 
@@ -61,6 +63,8 @@ that the visible display helper shows known and unknown readings while
 battery accessibility values expose known and unknown readings. Battery/device
 state remains local-only with no logging, network reporting, upload, analytics,
 or persistence behavior.
+On macOS, the baseline should parse the Xcode project without reading device
+battery state or changing battery-monitoring behavior.
 
 ## What We Will Not Merge (For Now)
 

@@ -71,6 +71,11 @@ stay available while preserving the single source of truth.
 
 The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label, accessibility value, and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
 
+The pinned GitHub Actions check runs `make check` on `macos-15`. When Xcode is
+available, the baseline also runs `xcodebuild -list` against `ChargeMe.xcodeproj`
+to verify project-file integrity. It does not read battery state, alter battery
+monitoring, perform signing, or run simulator behavior.
+
 For full legacy verification on macOS, use Xcode's test action or `xcodebuild test` with the appropriate scheme and destination.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.

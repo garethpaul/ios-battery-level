@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-10
+
+- Added pinned, read-only macOS CI for the canonical `make check` baseline.
+- Made Xcode-enabled checks parse `ChargeMe.xcodeproj` without reading battery
+  state or changing battery-monitoring behavior.
+
 ## 2026-06-09
 
 - Added an accessibility value for the visible battery-level label so known,

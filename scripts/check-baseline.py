@@ -3,6 +3,7 @@ from pathlib import Path
 import plistlib
 import re
 import shutil
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
@@ -18,6 +19,7 @@ NONFINITE_PLAN = ROOT / "docs/plans/2026-06-09-nonfinite-battery-level.md"
 ZERO_LEVEL_PLAN = ROOT / "docs/plans/2026-06-09-zero-battery-level.md"
 DISPLAY_PLAN = ROOT / "docs/plans/2026-06-09-visible-battery-level.md"
 ACCESSIBILITY_VALUE_PLAN = ROOT / "docs/plans/2026-06-09-battery-accessibility-value.md"
+HOSTED_VALIDATION_PLAN = ROOT / "docs/plans/2026-06-10-hosted-project-validation.md"
 
 
 def require(condition, message, failures):
@@ -63,6 +65,7 @@ def main():
     failures = []
     required_files = [
         ".gitignore",
+        ".github/workflows/check.yml",
         "CHANGES.md",
         "Makefile",
         "README.md",
@@ -85,6 +88,7 @@ def main():
         "docs/plans/2026-06-09-zero-battery-level.md",
         "docs/plans/2026-06-09-visible-battery-level.md",
         "docs/plans/2026-06-09-battery-accessibility-value.md",
+        "docs/plans/2026-06-10-hosted-project-validation.md",
         "docs/readme-overview.svg",
     ]
 
@@ -125,6 +129,8 @@ def main():
     zero_level_plan = ZERO_LEVEL_PLAN.read_text(encoding="utf-8") if ZERO_LEVEL_PLAN.exists() else ""
     display_plan = DISPLAY_PLAN.read_text(encoding="utf-8") if DISPLAY_PLAN.exists() else ""
     accessibility_value_plan = ACCESSIBILITY_VALUE_PLAN.read_text(encoding="utf-8") if ACCESSIBILITY_VALUE_PLAN.exists() else ""
+    hosted_validation_plan = HOSTED_VALIDATION_PLAN.read_text(encoding="utf-8") if HOSTED_VALIDATION_PLAN.exists() else ""
+    workflow = read(".github/workflows/check.yml")
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -279,9 +285,32 @@ def main():
     require("status: completed" in accessibility_value_plan,
             "battery accessibility value plan must be marked completed",
             failures)
+    require("status: completed" in hosted_validation_plan and "make check" in hosted_validation_plan,
+            "hosted project validation plan must be completed and document make check",
+            failures)
+    require("permissions:\n  contents: read" in workflow,
+            "Check workflow must use read-only repository permissions",
+            failures)
+    require("cancel-in-progress: true" in workflow and "runs-on: macos-15" in workflow and
+            "timeout-minutes: 10" in workflow,
+            "Check workflow must bound duplicate and long-running macOS jobs",
+            failures)
+    require("actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" in workflow and
+            "run: make check" in workflow,
+            "Check workflow must pin checkout and run the canonical baseline",
+            failures)
 
     if shutil.which("xcodebuild"):
-        print("xcodebuild is available; run a scheme-specific Xcode test on macOS before release.")
+        result = subprocess.run(
+            ["xcodebuild", "-list", "-project", "ChargeMe.xcodeproj"],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        require(result.returncode == 0,
+                "xcodebuild could not parse ChargeMe.xcodeproj: " + result.stderr.strip(),
+                failures)
     else:
         print("xcodebuild unavailable; static iOS baseline only.")
 
