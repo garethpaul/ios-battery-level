@@ -30,13 +30,14 @@ Priority:
   local-only device state, plist/storyboard XML, Xcode metadata, and source inventory
 - Keep `make lint`, `make test`, `make build`, and `make check` available as
   local verification gates
-- Keep pinned macOS CI parsing `ChargeMe.xcodeproj` through the canonical
-  `make check` gate
+- Keep the app and test targets on Swift 5 with the iOS 12 deployment target
+- Keep pinned macOS CI compiling an unsigned simulator build through the
+  canonical `make check` gate
 
 Next priorities:
 
 - Add a small UI or testable wrapper only if it improves the sample
-- Modernize Swift/project settings in a dedicated pass
+- Add test execution to hosted CI once a shared scheme is maintained
 
 Contribution rules:
 
@@ -63,8 +64,8 @@ that the visible display helper shows known and unknown readings while
 battery accessibility values expose known and unknown readings. Battery/device
 state remains local-only with no logging, network reporting, upload, analytics,
 or persistence behavior.
-On macOS, the baseline should parse the Xcode project without reading device
-battery state or changing battery-monitoring behavior.
+On macOS, the baseline should compile an unsigned simulator build without
+launching the app, reading device battery state, or changing monitoring behavior.
 
 ## What We Will Not Merge (For Now)
 

@@ -20,6 +20,7 @@ ZERO_LEVEL_PLAN = ROOT / "docs/plans/2026-06-09-zero-battery-level.md"
 DISPLAY_PLAN = ROOT / "docs/plans/2026-06-09-visible-battery-level.md"
 ACCESSIBILITY_VALUE_PLAN = ROOT / "docs/plans/2026-06-09-battery-accessibility-value.md"
 HOSTED_VALIDATION_PLAN = ROOT / "docs/plans/2026-06-10-hosted-project-validation.md"
+SWIFT_5_BUILD_PLAN = ROOT / "docs/plans/2026-06-10-swift-5-app-build.md"
 
 
 def require(condition, message, failures):
@@ -89,6 +90,7 @@ def main():
         "docs/plans/2026-06-09-visible-battery-level.md",
         "docs/plans/2026-06-09-battery-accessibility-value.md",
         "docs/plans/2026-06-10-hosted-project-validation.md",
+        "docs/plans/2026-06-10-swift-5-app-build.md",
         "docs/readme-overview.svg",
     ]
 
@@ -130,6 +132,7 @@ def main():
     display_plan = DISPLAY_PLAN.read_text(encoding="utf-8") if DISPLAY_PLAN.exists() else ""
     accessibility_value_plan = ACCESSIBILITY_VALUE_PLAN.read_text(encoding="utf-8") if ACCESSIBILITY_VALUE_PLAN.exists() else ""
     hosted_validation_plan = HOSTED_VALIDATION_PLAN.read_text(encoding="utf-8") if HOSTED_VALIDATION_PLAN.exists() else ""
+    swift_5_build_plan = SWIFT_5_BUILD_PLAN.read_text(encoding="utf-8") if SWIFT_5_BUILD_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
@@ -138,23 +141,31 @@ def main():
     require(test_plist.get("CFBundlePackageType") == "BNDL",
             "ChargeMeTests Info.plist must remain a test bundle plist",
             failures)
-    require("IPHONEOS_DEPLOYMENT_TARGET = 8.3;" in project and "INFOPLIST_FILE = ChargeMe/Info.plist;" in project,
-            "Xcode project must preserve the legacy iOS deployment and plist wiring",
+    require(project.count("IPHONEOS_DEPLOYMENT_TARGET = 12.0;") == 2 and
+            "IPHONEOS_DEPLOYMENT_TARGET = 8.3;" not in project and
+            project.count("SWIFT_VERSION = 5.0;") == 4 and
+            "INFOPLIST_FILE = ChargeMe/Info.plist;" in project,
+            "Xcode project must use Swift 5 and iOS 12 while preserving plist wiring",
             failures)
     require("ENABLE_TESTABILITY = YES;" in project and "@testable import ChargeMe" in tests,
             "Xcode project and tests must keep ChargeMe app code testable from XCTest",
+            failures)
+    require("[UIApplication.LaunchOptionsKey: Any]?" in active_sources and
+            "func application(_ application: UIApplication" in active_sources,
+            "AppDelegate must use the Swift 5 launch-options signature",
             failures)
     require("Pods" not in project and not (ROOT / "Podfile").exists(),
             "Battery sample must stay dependency-free unless dependencies are explicitly documented",
             failures)
 
-    require("UIDevice.currentDevice()" in view_controller and ".batteryLevel" in view_controller,
+    require("UIDevice.current" in view_controller and "UIDevice.currentDevice()" not in view_controller and
+            ".batteryLevel" in view_controller,
             "ViewController must retain the UIDevice battery-level sample",
             failures)
-    require("batteryMonitoringEnabled = true" in view_controller,
+    require("isBatteryMonitoringEnabled = true" in view_controller,
             "ViewController must enable battery monitoring before reading batteryLevel",
             failures)
-    require("func readBatteryLevel() -> Float?" in view_controller and "displayBatteryLevel(self.readBatteryLevel())" in view_controller,
+    require("func readBatteryLevel() -> Float?" in view_controller and "displayBatteryLevel(readBatteryLevel())" in view_controller,
             "ViewController must keep battery reads in an explicit optional helper displayed from viewDidLoad",
             failures)
     require("let batteryLevelLabel = UILabel()" in view_controller and
@@ -163,17 +174,17 @@ def main():
             "NSLayoutConstraint(item: batteryLevelLabel" in view_controller,
             "ViewController must expose a local visible battery-level label",
             failures)
-    require("func displayBatteryLevel(batteryLevel: Float?)" in view_controller and
+    require("func displayBatteryLevel(_ batteryLevel: Float?)" in view_controller and
             "batteryLevelLabel.text = batteryLevelText(batteryLevel)" in view_controller and
             "batteryLevelLabel.accessibilityValue = batteryLevelAccessibilityValue(batteryLevel)" in view_controller,
             "ViewController must display battery readings through the formatter",
             failures)
-    require("func batteryLevelText(batteryLevel: Float?) -> String" in view_controller and
+    require("func batteryLevelText(_ batteryLevel: Float?) -> String" in view_controller and
             "Battery Level: Unknown" in view_controller and
             'String(format: "Battery Level: %.0f%%"' in view_controller,
             "ViewController must format known and unknown battery levels for display",
             failures)
-    require("func batteryLevelAccessibilityValue(batteryLevel: Float?) -> String" in view_controller and
+    require("func batteryLevelAccessibilityValue(_ batteryLevel: Float?) -> String" in view_controller and
             'return "Unknown"' in view_controller and
             'String(format: "%.0f%%"' in view_controller,
             "ViewController must expose known and unknown battery levels as accessibility values",
@@ -182,22 +193,22 @@ def main():
         view_controller,
         [
             "configureBatteryLevelLabel()",
-            "displayBatteryLevel(self.readBatteryLevel())",
+            "displayBatteryLevel(readBatteryLevel())",
         ],
         "ViewController must configure the battery label before displaying the sampled value",
         failures,
     )
-    require("func normalizedBatteryLevel(batteryLevel: Float) -> Float?" in view_controller and
+    require("func normalizedBatteryLevel(_ batteryLevel: Float) -> Float?" in view_controller and
             "!(batteryLevel >= 0.0 && batteryLevel <= 1.0)" in view_controller and "return nil" in view_controller,
             "ViewController must normalize unknown, non-finite, or out-of-range battery levels to nil",
             failures)
     require_order(
         view_controller,
         [
-            "let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled",
-            "device.batteryMonitoringEnabled = true",
+            "let wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled",
+            "device.isBatteryMonitoringEnabled = true",
             "defer {",
-            "device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled",
+            "device.isBatteryMonitoringEnabled = wasBatteryMonitoringEnabled",
             "let batteryLevel = device.batteryLevel",
             "return normalizedBatteryLevel(batteryLevel)",
         ],
@@ -288,6 +299,9 @@ def main():
     require("status: completed" in hosted_validation_plan and "make check" in hosted_validation_plan,
             "hosted project validation plan must be completed and document make check",
             failures)
+    require("status: completed" in swift_5_build_plan and "simulator" in swift_5_build_plan.lower(),
+            "Swift 5 app build plan must be completed and document simulator verification",
+            failures)
     require("permissions:\n  contents: read" in workflow,
             "Check workflow must use read-only repository permissions",
             failures)
@@ -302,14 +316,22 @@ def main():
 
     if shutil.which("xcodebuild"):
         result = subprocess.run(
-            ["xcodebuild", "-list", "-project", "ChargeMe.xcodeproj"],
+            [
+                "xcodebuild",
+                "-project", "ChargeMe.xcodeproj",
+                "-target", "ChargeMe",
+                "-configuration", "Debug",
+                "-sdk", "iphonesimulator",
+                "CODE_SIGNING_ALLOWED=NO",
+                "build",
+            ],
             cwd=ROOT,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
         )
         require(result.returncode == 0,
-                "xcodebuild could not parse ChargeMe.xcodeproj: " + result.stderr.strip(),
+                "xcodebuild could not compile ChargeMe for the simulator: " + result.stdout.strip(),
                 failures)
     else:
         print("xcodebuild unavailable; static iOS baseline only.")

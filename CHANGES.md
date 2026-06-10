@@ -2,6 +2,10 @@
 
 ## 2026-06-10
 
+- Migrated the app and XCTest source from Swift 2 syntax to Swift 5.
+- Raised the deployment target from iOS 8.3 to iOS 12.
+- Upgraded Xcode-enabled validation from project parsing to an unsigned iOS
+  Simulator build of the app target.
 - Added pinned, read-only macOS CI for the canonical `make check` baseline.
 - Made Xcode-enabled checks parse `ChargeMe.xcodeproj` without reading battery
   state or changing battery-monitoring behavior.
