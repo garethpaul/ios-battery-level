@@ -8,6 +8,8 @@
   execution without battery telemetry, deployment, or signing material.
 - Fixed Swift comment stripping so quoted plain-HTTP URLs remain visible to the
   local-only privacy baseline.
+- Revalidated battery values in text and accessibility formatters so invalid
+  direct inputs use the unknown state.
 
 ## 2026-06-10
 
