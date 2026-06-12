@@ -73,6 +73,14 @@ def read(relative_path):
     return (ROOT / relative_path).read_text(encoding="utf-8", errors="replace")
 
 
+def markdown_section(text, heading):
+    match = re.search(
+        rf"(?ms)^## {re.escape(heading)}\s*$\n(.*?)(?=^## |\Z)",
+        text,
+    )
+    return match.group(1).strip() if match else ""
+
+
 def strip_swift_line_comments(text):
     stripped_lines = []
     for line in text.splitlines():
@@ -409,9 +417,37 @@ def main():
             "hosted macOS XCTest run" in hosted_xctest_plan,
             "hosted XCTest plan must record the completed executable test contract",
             failures)
-    require("status: completed" in presentation_plan and "mutations" in presentation_plan.lower(),
-            "battery presentation normalization plan must record completed mutation verification",
+    presentation_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", presentation_plan)
+    presentation_work = markdown_section(presentation_plan, "Work Completed")
+    presentation_verification = markdown_section(
+        presentation_plan, "Verification Completed"
+    )
+    require(presentation_status == ["completed"] and presentation_work,
+            "battery presentation normalization plan must record one completed status and completed work",
             failures)
+    require(presentation_verification and
+            not re.search(r"(?i)\b(?:pending|todo|tbd|not run)\b", presentation_verification),
+            "battery presentation normalization plan must record finished verification without pending markers",
+            failures)
+    for evidence in [
+        "make check",
+        "make lint",
+        "make test",
+        "make build",
+        "python3 -m py_compile scripts/check-baseline.py",
+        "sh -n scripts/run-tests.sh",
+        "git diff --check",
+        "27394507895",
+        "27394511486",
+        "27394736468",
+        "27402322921",
+        "287335f16f78525ddbb899b0f7119bc7ab1555e3",
+        "7dce00c264c429756336d5bc37d8d5f79513609f",
+        "let normalizedLevel = normalizedBatteryLevel(batteryLevel)",
+    ]:
+        require(evidence in presentation_verification,
+                f"battery presentation normalization plan must preserve verification evidence: {evidence}",
+                failures)
     require(workflow == EXPECTED_WORKFLOW,
             "Check workflow must exactly match the bounded, credential-free macOS XCTest contract",
             failures)
