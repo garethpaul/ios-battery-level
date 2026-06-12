@@ -16,40 +16,40 @@ class ViewController: UIViewController {
         super.viewDidLoad()
 
         configureBatteryLevelLabel()
-        displayBatteryLevel(self.readBatteryLevel())
+        displayBatteryLevel(readBatteryLevel())
 
         // Do any additional setup after loading the view, typically from a nib.
     }
 
     func configureBatteryLevelLabel() {
-        batteryLevelLabel.textAlignment = .Center
+        batteryLevelLabel.textAlignment = .center
         batteryLevelLabel.accessibilityLabel = "Battery Level"
         batteryLevelLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(batteryLevelLabel)
         view.addConstraints([
-            NSLayoutConstraint(item: batteryLevelLabel, attribute: .CenterX, relatedBy: .Equal, toItem: view, attribute: .CenterX, multiplier: 1.0, constant: 0.0),
-            NSLayoutConstraint(item: batteryLevelLabel, attribute: .CenterY, relatedBy: .Equal, toItem: view, attribute: .CenterY, multiplier: 1.0, constant: 0.0)
+            NSLayoutConstraint(item: batteryLevelLabel, attribute: .centerX, relatedBy: .equal, toItem: view, attribute: .centerX, multiplier: 1.0, constant: 0.0),
+            NSLayoutConstraint(item: batteryLevelLabel, attribute: .centerY, relatedBy: .equal, toItem: view, attribute: .centerY, multiplier: 1.0, constant: 0.0)
         ])
     }
 
     func readBatteryLevel() -> Float? {
-        let device = UIDevice.currentDevice()
-        let wasBatteryMonitoringEnabled = device.batteryMonitoringEnabled
-        device.batteryMonitoringEnabled = true
+        let device = UIDevice.current
+        let wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled
+        device.isBatteryMonitoringEnabled = true
         defer {
-            device.batteryMonitoringEnabled = wasBatteryMonitoringEnabled
+            device.isBatteryMonitoringEnabled = wasBatteryMonitoringEnabled
         }
 
         let batteryLevel = device.batteryLevel
         return normalizedBatteryLevel(batteryLevel)
     }
 
-    func displayBatteryLevel(batteryLevel: Float?) {
+    func displayBatteryLevel(_ batteryLevel: Float?) {
         batteryLevelLabel.text = batteryLevelText(batteryLevel)
         batteryLevelLabel.accessibilityValue = batteryLevelAccessibilityValue(batteryLevel)
     }
 
-    func batteryLevelText(batteryLevel: Float?) -> String {
+    func batteryLevelText(_ batteryLevel: Float?) -> String {
         guard let batteryLevel = batteryLevel else {
             return "Battery Level: Unknown"
         }
@@ -57,7 +57,7 @@ class ViewController: UIViewController {
         return String(format: "Battery Level: %.0f%%", Double(batteryLevel * 100.0))
     }
 
-    func batteryLevelAccessibilityValue(batteryLevel: Float?) -> String {
+    func batteryLevelAccessibilityValue(_ batteryLevel: Float?) -> String {
         guard let batteryLevel = batteryLevel else {
             return "Unknown"
         }
@@ -65,7 +65,7 @@ class ViewController: UIViewController {
         return String(format: "%.0f%%", Double(batteryLevel * 100.0))
     }
 
-    func normalizedBatteryLevel(batteryLevel: Float) -> Float? {
+    func normalizedBatteryLevel(_ batteryLevel: Float) -> Float? {
         if !(batteryLevel >= 0.0 && batteryLevel <= 1.0) {
             return nil
         }

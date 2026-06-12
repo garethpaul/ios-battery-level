@@ -71,11 +71,13 @@ stay available while preserving the single source of truth.
 
 The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label, accessibility value, and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
 
-For full legacy verification on macOS, use Xcode's test action or `xcodebuild test` with the appropriate scheme and destination.
+The pinned GitHub Actions check runs `make check` on `macos-15`. When Xcode is
+available, the baseline also compiles an unsigned Swift 5 Debug build for the
+iOS Simulator. It does not launch the app, read battery state, alter battery
+monitoring, or use signing material.
 
-GitHub Actions runs the same Python static `make check` baseline on Ubuntu for
-pushes and pull requests. Full simulator and device verification remains a
-macOS Xcode task.
+For runtime verification on macOS, launch the sample on a simulator or device
+and confirm the visible and accessibility values match the local battery state.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -101,8 +103,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-battery-accessibility-value.md` for the battery
   accessibility value guardrail.
 - See `docs/plans/2026-06-09-make-gate-aliases.md` for the local gate alias guardrail.
-- See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions static
-  baseline.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the initial hosted static
+  baseline and `docs/plans/2026-06-10-hosted-project-validation.md` plus
+  `docs/plans/2026-06-10-swift-5-app-build.md` for its macOS build evolution.
 - Run `make lint`, `make test`, `make build`, and `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 
 ## Contributing

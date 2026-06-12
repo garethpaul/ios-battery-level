@@ -30,9 +30,11 @@ Helpful reports include:
 - No primary dependency manifest was detected in the repository root. If dependencies are added later, include a manifest and prefer reproducible installation instructions.
 - Battery and device state can become privacy-sensitive when logged, persisted, correlated, or transmitted. Keep the sample local-only unless a future change documents consent, retention, and data flow.
 - `make check` runs a static baseline that guards plist/storyboard metadata, Xcode project wiring, source inventory, XCTest testability, visible local battery-level display, accessibility value exposure, zero battery-level preservation, unknown, non-finite, and out-of-range battery-level normalization, battery-monitoring behavior and restoration, and logging/network regressions when Xcode is unavailable.
-- GitHub Actions runs only the SDK-free `make check` baseline. Do not add
-  device telemetry, deployment, or credentialed service steps to that workflow
-  without a separate privacy and security review.
+- The pinned GitHub Actions macOS workflow uses read-only repository permissions and compiles
+  an unsigned simulator build without launching the app, reading battery state,
+  enabling device monitoring, or using signing material.
+- Do not add device telemetry, deployment, or credentialed service steps to
+  that workflow without a separate privacy and security review.
 
 ## Mobile Privacy Notes
 
