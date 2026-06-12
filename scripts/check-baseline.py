@@ -22,6 +22,45 @@ ACCESSIBILITY_VALUE_PLAN = ROOT / "docs/plans/2026-06-09-battery-accessibility-v
 CI_PLAN = ROOT / "docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_VALIDATION_PLAN = ROOT / "docs/plans/2026-06-10-hosted-project-validation.md"
 SWIFT_5_BUILD_PLAN = ROOT / "docs/plans/2026-06-10-swift-5-app-build.md"
+HOSTED_XCTEST_PLAN = ROOT / "docs/plans/2026-06-12-hosted-xctest.md"
+EXPECTED_WORKFLOW = """name: Check
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Validate battery baseline and XCTest
+        run: make test
+"""
+EXPECTED_MAKEFILE = """.PHONY: build check lint test
+
+lint: check
+
+test: check
+\t@if command -v xcodebuild >/dev/null 2>&1; then ./scripts/run-tests.sh; else printf '%s\\n' "Skipping XCTest: xcodebuild is not installed."; fi
+
+build: check
+
+check:
+\tpython3 scripts/check-baseline.py
+"""
 
 
 def require(condition, message, failures):
@@ -34,7 +73,26 @@ def read(relative_path):
 
 
 def strip_swift_line_comments(text):
-    return "\n".join(line.split("//", 1)[0] for line in text.splitlines())
+    stripped_lines = []
+    for line in text.splitlines():
+        output = []
+        in_string = False
+        escaped = False
+        index = 0
+        while index < len(line):
+            character = line[index]
+            if not in_string and character == "/" and index + 1 < len(line) and line[index + 1] == "/":
+                break
+            output.append(character)
+            if character == '"' and not escaped:
+                in_string = not in_string
+            if character == "\\":
+                escaped = not escaped
+            else:
+                escaped = False
+            index += 1
+        stripped_lines.append("".join(output))
+    return "\n".join(stripped_lines)
 
 
 def require_order(text, tokens, message, failures):
@@ -65,8 +123,12 @@ def parse_plist(relative_path, failures):
 
 def main():
     failures = []
+    swift_comment_fixture = 'let endpoint = "http://example.com/path" // trailing comment'
+    require(strip_swift_line_comments(swift_comment_fixture) ==
+            'let endpoint = "http://example.com/path" ',
+            "Swift comment stripping must preserve quoted URL strings",
+            failures)
     required_files = [
-        ".github/workflows/check.yml",
         ".gitignore",
         ".github/workflows/check.yml",
         "CHANGES.md",
@@ -76,6 +138,7 @@ def main():
         "VISION.md",
         "ChargeMe.xcodeproj/project.pbxproj",
         "ChargeMe.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+        "ChargeMe.xcodeproj/xcshareddata/xcschemes/ChargeMe.xcscheme",
         "ChargeMe/Info.plist",
         "ChargeMe/AppDelegate.swift",
         "ChargeMe/ViewController.swift",
@@ -94,7 +157,9 @@ def main():
         "docs/plans/2026-06-10-ci-baseline.md",
         "docs/plans/2026-06-10-hosted-project-validation.md",
         "docs/plans/2026-06-10-swift-5-app-build.md",
+        "docs/plans/2026-06-12-hosted-xctest.md",
         "docs/readme-overview.svg",
+        "scripts/run-tests.sh",
     ]
 
     for relative_path in required_files:
@@ -102,6 +167,7 @@ def main():
 
     for xml_file in [
         "ChargeMe.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+        "ChargeMe.xcodeproj/xcshareddata/xcschemes/ChargeMe.xcscheme",
         "ChargeMe/Base.lproj/Main.storyboard",
         "ChargeMe/Base.lproj/LaunchScreen.xib",
         "docs/readme-overview.svg",
@@ -124,6 +190,8 @@ def main():
     changes = read("CHANGES.md")
     gitignore = read(".gitignore")
     makefile = read("Makefile")
+    test_runner = read("scripts/run-tests.sh")
+    shared_scheme = read("ChargeMe.xcodeproj/xcshareddata/xcschemes/ChargeMe.xcscheme")
     baseline_plan = BASELINE_PLAN.read_text(encoding="utf-8") if BASELINE_PLAN.exists() else ""
     make_gates_plan = MAKE_GATES_PLAN.read_text(encoding="utf-8") if MAKE_GATES_PLAN.exists() else ""
     lifecycle_plan = LIFECYCLE_PLAN.read_text(encoding="utf-8") if LIFECYCLE_PLAN.exists() else ""
@@ -137,7 +205,13 @@ def main():
     ci_plan = CI_PLAN.read_text(encoding="utf-8") if CI_PLAN.exists() else ""
     hosted_validation_plan = HOSTED_VALIDATION_PLAN.read_text(encoding="utf-8") if HOSTED_VALIDATION_PLAN.exists() else ""
     swift_5_build_plan = SWIFT_5_BUILD_PLAN.read_text(encoding="utf-8") if SWIFT_5_BUILD_PLAN.exists() else ""
+    hosted_xctest_plan = HOSTED_XCTEST_PLAN.read_text(encoding="utf-8") if HOSTED_XCTEST_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
+
+    subprocess.check_call(["sh", "-n", "scripts/run-tests.sh"], cwd=ROOT)
+    require((ROOT / "scripts/run-tests.sh").stat().st_mode & 0o111,
+            "scripts/run-tests.sh must be executable",
+            failures)
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -254,8 +328,22 @@ def main():
     require("*.local.xcconfig" in gitignore and ".env" in gitignore and "DerivedData" in gitignore,
             ".gitignore must exclude local config and Xcode build products",
             failures)
-    require(".PHONY: build check lint test" in makefile and "lint test build: check" in makefile,
-            "Makefile must expose lint, test, and build aliases for the local baseline",
+    require(makefile == EXPECTED_MAKEFILE,
+            "Makefile must exactly preserve static and XCTest verification gates",
+            failures)
+    require("xcrun simctl list devices available" in test_runner and
+            "IOS_DESTINATION" in test_runner and "IOS_SIMULATOR_NAME" in test_runner and
+            '-scheme "$SCHEME"' in test_runner and '-destination "$DESTINATION"' in test_runner and
+            "CODE_SIGNING_ALLOWED=NO" in test_runner and "test" in test_runner,
+            "test runner must discover or accept a simulator and execute unsigned XCTest",
+            failures)
+    require("iPhone 5" not in test_runner,
+            "test runner must not use a retired fixed simulator",
+            failures)
+    require(shared_scheme.count('BlueprintIdentifier = "7F2D99BC1B11626500668E52"') >= 2 and
+            shared_scheme.count('BlueprintIdentifier = "7F2D99D11B11626500668E52"') >= 2 and
+            '<TestableReference' in shared_scheme and 'skipped = "NO"' in shared_scheme,
+            "shared scheme must build the app and execute ChargeMeTests",
             failures)
     require("make lint" in readme and "make test" in readme and "make build" in readme and "make check" in readme and "GitHub Actions" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
             "restore" in readme.lower() and "defer" in readme.lower() and "unknown" in readme.lower() and "out-of-range" in readme.lower() and "non-finite" in readme.lower() and "zero" in readme.lower(),
@@ -309,16 +397,12 @@ def main():
     require("status: completed" in swift_5_build_plan and "simulator" in swift_5_build_plan.lower(),
             "Swift 5 app build plan must be completed and document simulator verification",
             failures)
-    require("permissions:\n  contents: read" in workflow,
-            "Check workflow must use read-only repository permissions",
+    require("status: completed" in hosted_xctest_plan and "make test" in hosted_xctest_plan and
+            "hosted macOS XCTest run" in hosted_xctest_plan,
+            "hosted XCTest plan must record the completed executable test contract",
             failures)
-    require("cancel-in-progress: true" in workflow and "runs-on: macos-15" in workflow and
-            "timeout-minutes: 10" in workflow,
-            "Check workflow must bound duplicate and long-running macOS jobs",
-            failures)
-    require("actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" in workflow and
-            "run: make check" in workflow,
-            "Check workflow must pin checkout and run the canonical baseline",
+    require(workflow == EXPECTED_WORKFLOW,
+            "Check workflow must exactly match the bounded, credential-free macOS XCTest contract",
             failures)
 
     if shutil.which("xcodebuild"):

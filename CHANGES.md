@@ -1,5 +1,14 @@
 # Changes
 
+## 2026-06-12
+
+- Added a shared Xcode scheme and portable simulator discovery so hosted macOS
+  CI executes the existing XCTest suite through `make test`.
+- Disabled persisted checkout credentials and retained unsigned simulator
+  execution without battery telemetry, deployment, or signing material.
+- Fixed Swift comment stripping so quoted plain-HTTP URLs remain visible to the
+  local-only privacy baseline.
+
 ## 2026-06-10
 
 - Added a GitHub Actions workflow that runs the SDK-free `make check` baseline
