@@ -1,7 +1,18 @@
 # Changes
 
+## 2026-06-12
+
+- Added a shared Xcode scheme and portable simulator discovery so hosted macOS
+  CI executes the existing XCTest suite through `make test`.
+- Disabled persisted checkout credentials and retained unsigned simulator
+  execution without battery telemetry, deployment, or signing material.
+- Fixed Swift comment stripping so quoted plain-HTTP URLs remain visible to the
+  local-only privacy baseline.
+
 ## 2026-06-10
 
+- Added a GitHub Actions workflow that runs the SDK-free `make check` baseline
+  for the local-only battery-level sample.
 - Migrated the app and XCTest source from Swift 2 syntax to Swift 5.
 - Raised the deployment target from iOS 8.3 to iOS 12.
 - Upgraded Xcode-enabled validation from project parsing to an unsigned iOS
@@ -9,7 +20,6 @@
 - Added pinned, read-only macOS CI for the canonical `make check` baseline.
 - Made Xcode-enabled checks parse `ChargeMe.xcodeproj` without reading battery
   state or changing battery-monitoring behavior.
-
 ## 2026-06-09
 
 - Added an accessibility value for the visible battery-level label so known,
