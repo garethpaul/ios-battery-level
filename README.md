@@ -73,6 +73,10 @@ The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project X
 
 For full legacy verification on macOS, use Xcode's test action or `xcodebuild test` with the appropriate scheme and destination.
 
+GitHub Actions runs the same Python static `make check` baseline on Ubuntu for
+pushes and pull requests. Full simulator and device verification remains a
+macOS Xcode task.
+
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
 ## Configuration and Secrets
@@ -97,6 +101,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-battery-accessibility-value.md` for the battery
   accessibility value guardrail.
 - See `docs/plans/2026-06-09-make-gate-aliases.md` for the local gate alias guardrail.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions static
+  baseline.
 - Run `make lint`, `make test`, `make build`, and `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 
 ## Contributing

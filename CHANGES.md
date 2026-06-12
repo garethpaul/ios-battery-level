@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-10
+
+- Added a GitHub Actions workflow that runs the SDK-free `make check` baseline
+  for the local-only battery-level sample.
+
 ## 2026-06-09
 
 - Added an accessibility value for the visible battery-level label so known,

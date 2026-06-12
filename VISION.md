@@ -30,6 +30,7 @@ Priority:
   local-only device state, plist/storyboard XML, Xcode metadata, and source inventory
 - Keep `make lint`, `make test`, `make build`, and `make check` available as
   local verification gates
+- Keep GitHub Actions aligned with the SDK-free `make check` baseline
 
 Next priorities:
 

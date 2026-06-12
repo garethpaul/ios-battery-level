@@ -18,6 +18,8 @@ NONFINITE_PLAN = ROOT / "docs/plans/2026-06-09-nonfinite-battery-level.md"
 ZERO_LEVEL_PLAN = ROOT / "docs/plans/2026-06-09-zero-battery-level.md"
 DISPLAY_PLAN = ROOT / "docs/plans/2026-06-09-visible-battery-level.md"
 ACCESSIBILITY_VALUE_PLAN = ROOT / "docs/plans/2026-06-09-battery-accessibility-value.md"
+CI_WORKFLOW = ROOT / ".github/workflows/check.yml"
+CI_PLAN = ROOT / "docs/plans/2026-06-10-ci-baseline.md"
 
 
 def require(condition, message, failures):
@@ -62,6 +64,7 @@ def parse_plist(relative_path, failures):
 def main():
     failures = []
     required_files = [
+        ".github/workflows/check.yml",
         ".gitignore",
         "CHANGES.md",
         "Makefile",
@@ -85,6 +88,7 @@ def main():
         "docs/plans/2026-06-09-zero-battery-level.md",
         "docs/plans/2026-06-09-visible-battery-level.md",
         "docs/plans/2026-06-09-battery-accessibility-value.md",
+        "docs/plans/2026-06-10-ci-baseline.md",
         "docs/readme-overview.svg",
     ]
 
@@ -125,6 +129,8 @@ def main():
     zero_level_plan = ZERO_LEVEL_PLAN.read_text(encoding="utf-8") if ZERO_LEVEL_PLAN.exists() else ""
     display_plan = DISPLAY_PLAN.read_text(encoding="utf-8") if DISPLAY_PLAN.exists() else ""
     accessibility_value_plan = ACCESSIBILITY_VALUE_PLAN.read_text(encoding="utf-8") if ACCESSIBILITY_VALUE_PLAN.exists() else ""
+    ci_workflow = CI_WORKFLOW.read_text(encoding="utf-8") if CI_WORKFLOW.exists() else ""
+    ci_plan = CI_PLAN.read_text(encoding="utf-8") if CI_PLAN.exists() else ""
 
     require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
             "ChargeMe Info.plist must keep the expected sample bundle identifier",
@@ -236,7 +242,10 @@ def main():
     require(".PHONY: build check lint test" in makefile and "lint test build: check" in makefile,
             "Makefile must expose lint, test, and build aliases for the local baseline",
             failures)
-    require("make lint" in readme and "make test" in readme and "make build" in readme and "make check" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
+    require("actions/setup-python@v5" in ci_workflow and 'python-version: "3.12"' in ci_workflow and "make check" in ci_workflow,
+            "GitHub Actions workflow must run the Python static make check baseline",
+            failures)
+    require("make lint" in readme and "make test" in readme and "make build" in readme and "make check" in readme and "GitHub Actions" in readme and "ChargeMe.xcodeproj" in readme and "batteryMonitoringEnabled" in readme and
             "restore" in readme.lower() and "defer" in readme.lower() and "unknown" in readme.lower() and "out-of-range" in readme.lower() and "non-finite" in readme.lower() and "zero" in readme.lower(),
             "README must document static verification, project usage, and deferred battery monitoring restoration",
             failures)
@@ -246,14 +255,14 @@ def main():
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
-    require("scripts/check-baseline.py" in vision and "make lint" in vision and "make test" in vision and "make build" in vision and "local-only" in vision.lower() and
+    require("scripts/check-baseline.py" in vision and "make lint" in vision and "make test" in vision and "make build" in vision and "GitHub Actions" in vision and "local-only" in vision.lower() and
             "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower() and "zero" in vision.lower() and "visible" in vision.lower() and "accessibility value" in vision.lower(),
             "VISION must describe the current static privacy baseline",
             failures)
-    require("battery" in security.lower() and "make check" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower() and "accessibility value" in security.lower(),
+    require("battery" in security.lower() and "make check" in security and "GitHub Actions" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower() and "accessibility value" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
-    require("battery monitoring" in changes.lower() and "make check" in changes and "make lint" in changes and "make test" in changes and "make build" in changes and "restores" in changes and
+    require("battery monitoring" in changes.lower() and "GitHub Actions" in changes and "make check" in changes and "make lint" in changes and "make test" in changes and "make build" in changes and "restores" in changes and
             "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower() and "visible" in changes.lower() and "accessibility value" in changes.lower(),
             "CHANGES must record the battery monitoring fix, unknown-level normalization, deferred restoration, and baseline",
             failures)
@@ -278,6 +287,9 @@ def main():
             failures)
     require("status: completed" in accessibility_value_plan,
             "battery accessibility value plan must be marked completed",
+            failures)
+    require("status: completed" in ci_plan and "GitHub Actions" in ci_plan and "make check" in ci_plan,
+            "CI baseline plan must record hosted make check verification",
             failures)
 
     if shutil.which("xcodebuild"):
