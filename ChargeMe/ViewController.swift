@@ -50,19 +50,21 @@ class ViewController: UIViewController {
     }
 
     func batteryLevelText(_ batteryLevel: Float?) -> String {
-        guard let batteryLevel = batteryLevel else {
+        guard let batteryLevel = batteryLevel,
+              let normalizedLevel = normalizedBatteryLevel(batteryLevel) else {
             return "Battery Level: Unknown"
         }
 
-        return String(format: "Battery Level: %.0f%%", Double(batteryLevel * 100.0))
+        return String(format: "Battery Level: %.0f%%", Double(normalizedLevel * 100.0))
     }
 
     func batteryLevelAccessibilityValue(_ batteryLevel: Float?) -> String {
-        guard let batteryLevel = batteryLevel else {
+        guard let batteryLevel = batteryLevel,
+              let normalizedLevel = normalizedBatteryLevel(batteryLevel) else {
             return "Unknown"
         }
 
-        return String(format: "%.0f%%", Double(batteryLevel * 100.0))
+        return String(format: "%.0f%%", Double(normalizedLevel * 100.0))
     }
 
     func normalizedBatteryLevel(_ batteryLevel: Float) -> Float? {

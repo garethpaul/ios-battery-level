@@ -64,6 +64,8 @@ that the visible display helper shows known and unknown readings while
 battery accessibility values expose known and unknown readings. Battery/device
 state remains local-only with no logging, network reporting, upload, analytics,
 or persistence behavior.
+Text and accessibility presentation revalidate inputs so direct callers cannot
+expose non-finite or out-of-range percentages.
 On macOS, the baseline should compile an unsigned simulator build without
 launching the app, reading device battery state, or changing monitoring behavior.
 

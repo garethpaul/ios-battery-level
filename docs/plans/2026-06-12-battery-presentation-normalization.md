@@ -1,6 +1,6 @@
 # Battery Presentation Normalization
 
-status: planned
+status: completed
 
 ## Context
 
@@ -9,7 +9,7 @@ formatters accept optional raw floats directly. A future caller can bypass the
 read helper and expose impossible values such as `150%` or `nan%` instead of the
 existing unknown state.
 
-## Scope
+## Completed Scope
 
 - Normalize non-nil battery values inside both presentation formatters.
 - Preserve valid zero, partial, and full percentages.

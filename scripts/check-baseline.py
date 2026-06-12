@@ -23,6 +23,7 @@ CI_PLAN = ROOT / "docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_VALIDATION_PLAN = ROOT / "docs/plans/2026-06-10-hosted-project-validation.md"
 SWIFT_5_BUILD_PLAN = ROOT / "docs/plans/2026-06-10-swift-5-app-build.md"
 HOSTED_XCTEST_PLAN = ROOT / "docs/plans/2026-06-12-hosted-xctest.md"
+PRESENTATION_PLAN = ROOT / "docs/plans/2026-06-12-battery-presentation-normalization.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -206,6 +207,7 @@ def main():
     hosted_validation_plan = HOSTED_VALIDATION_PLAN.read_text(encoding="utf-8") if HOSTED_VALIDATION_PLAN.exists() else ""
     swift_5_build_plan = SWIFT_5_BUILD_PLAN.read_text(encoding="utf-8") if SWIFT_5_BUILD_PLAN.exists() else ""
     hosted_xctest_plan = HOSTED_XCTEST_PLAN.read_text(encoding="utf-8") if HOSTED_XCTEST_PLAN.exists() else ""
+    presentation_plan = PRESENTATION_PLAN.read_text(encoding="utf-8") if PRESENTATION_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
 
     subprocess.check_call(["sh", "-n", "scripts/run-tests.sh"], cwd=ROOT)
@@ -267,6 +269,10 @@ def main():
             'String(format: "%.0f%%"' in view_controller,
             "ViewController must expose known and unknown battery levels as accessibility values",
             failures)
+    require(view_controller.count("let normalizedLevel = normalizedBatteryLevel(batteryLevel)") == 2 and
+            view_controller.count("Double(normalizedLevel * 100.0)") == 2,
+            "Battery presentation formatters must normalize values before displaying percentages",
+            failures)
     require_order(
         view_controller,
         [
@@ -304,12 +310,14 @@ def main():
             "testBatteryLevelTextShowsZeroPercentage" in tests and
             "Battery Level: 0%" in tests and
             "testBatteryLevelTextShowsUnknownWhenMissing" in tests and
+            "testBatteryLevelTextShowsUnknownForInvalidValues" in tests and
             "Battery Level: Unknown" in tests and
             "testBatteryLevelAccessibilityValueShowsKnownPercentage" in tests and
             '"75%"' in tests and
             "testBatteryLevelAccessibilityValueShowsZeroPercentage" in tests and
             '"0%"' in tests and
             "testBatteryLevelAccessibilityValueShowsUnknownWhenMissing" in tests and
+            "testBatteryLevelAccessibilityValueShowsUnknownForInvalidValues" in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
             failures)
@@ -400,6 +408,9 @@ def main():
     require("status: completed" in hosted_xctest_plan and "make test" in hosted_xctest_plan and
             "hosted macOS XCTest run" in hosted_xctest_plan,
             "hosted XCTest plan must record the completed executable test contract",
+            failures)
+    require("status: completed" in presentation_plan and "mutations" in presentation_plan.lower(),
+            "battery presentation normalization plan must record completed mutation verification",
             failures)
     require(workflow == EXPECTED_WORKFLOW,
             "Check workflow must exactly match the bounded, credential-free macOS XCTest contract",
