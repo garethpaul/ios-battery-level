@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Made every Make verification target derive the checkout root so static and
+  XCTest gates work from external directories.
 - Refreshed visible and accessibility battery values on each view appearance
   instead of keeping the initial load-time reading.
 

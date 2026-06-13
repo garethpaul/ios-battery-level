@@ -25,6 +25,7 @@ SWIFT_5_BUILD_PLAN = ROOT / "docs/plans/2026-06-10-swift-5-app-build.md"
 HOSTED_XCTEST_PLAN = ROOT / "docs/plans/2026-06-12-hosted-xctest.md"
 PRESENTATION_PLAN = ROOT / "docs/plans/2026-06-12-battery-presentation-normalization.md"
 APPEARANCE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-13-battery-view-appearance-refresh.md"
+LOCATION_INDEPENDENT_MAKE_PLAN = ROOT / "docs/plans/2026-06-13-location-independent-make.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -53,15 +54,17 @@ jobs:
 """
 EXPECTED_MAKEFILE = """.PHONY: build check lint test
 
+ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
 lint: check
 
 test: check
-\t@if command -v xcodebuild >/dev/null 2>&1; then ./scripts/run-tests.sh; else printf '%s\\n' "Skipping XCTest: xcodebuild is not installed."; fi
+\t@if command -v xcodebuild >/dev/null 2>&1; then cd "$(ROOT)" && ./scripts/run-tests.sh; else printf '%s\\n' "Skipping XCTest: xcodebuild is not installed."; fi
 
 build: check
 
 check:
-\tpython3 scripts/check-baseline.py
+\t@python3 "$(ROOT)/scripts/check-baseline.py"
 """
 
 
@@ -190,6 +193,7 @@ def main():
         "docs/plans/2026-06-10-swift-5-app-build.md",
         "docs/plans/2026-06-12-hosted-xctest.md",
         "docs/plans/2026-06-13-battery-view-appearance-refresh.md",
+        "docs/plans/2026-06-13-location-independent-make.md",
         "docs/readme-overview.svg",
         "scripts/run-tests.sh",
     ]
@@ -241,6 +245,7 @@ def main():
     hosted_xctest_plan = HOSTED_XCTEST_PLAN.read_text(encoding="utf-8") if HOSTED_XCTEST_PLAN.exists() else ""
     presentation_plan = PRESENTATION_PLAN.read_text(encoding="utf-8") if PRESENTATION_PLAN.exists() else ""
     appearance_refresh_plan = APPEARANCE_REFRESH_PLAN.read_text(encoding="utf-8") if APPEARANCE_REFRESH_PLAN.exists() else ""
+    location_independent_make_plan = LOCATION_INDEPENDENT_MAKE_PLAN.read_text(encoding="utf-8") if LOCATION_INDEPENDENT_MAKE_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
     view_did_load = swift_function_body(active_view_controller, "override func viewDidLoad")
     view_will_appear = swift_function_body(active_view_controller, "override func viewWillAppear")
@@ -410,6 +415,8 @@ def main():
     require("view appearance" in readme.lower(),
             "README must document battery refresh on view appearance",
             failures)
+    require("absolute Makefile path" in readme and "any working directory" in readme,
+            "README must document location-independent verification", failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
@@ -433,6 +440,8 @@ def main():
     require("view appearance" in changes.lower(),
             "CHANGES must record appearance-time battery refresh",
             failures)
+    require("Make verification target derive the checkout root" in changes and "external directories" in changes,
+            "CHANGES must record location-independent verification", failures)
     require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
             "status: completed" in defer_plan and "status: completed" in unknown_level_plan,
             "plans must be marked completed",
@@ -473,6 +482,11 @@ def main():
             "hostile mutations" in appearance_refresh_plan.lower(),
             "battery view appearance plan must record completed status and actual verification",
             failures)
+    location_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", location_independent_make_plan)
+    location_verification = markdown_section(location_independent_make_plan, "Verification Completed")
+    location_required = ("Root and external-directory Make gates passed", "root-derivation mutation failed", "checker-invocation mutation failed", "XCTest-runner mutation failed", "plan-status mutation failed", "plan-evidence mutation failed", "documentation mutation failed")
+    require(location_statuses == ["completed"] and all(item in location_verification for item in location_required) and not re.search(r"(?i)\b(?:pending|todo|tbd|not run)\b", location_verification),
+            "location-independent Make plan must record completed verification", failures)
     presentation_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", presentation_plan)
     presentation_work = markdown_section(presentation_plan, "Work Completed")
     presentation_verification = markdown_section(
