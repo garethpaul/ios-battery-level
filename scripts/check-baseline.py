@@ -24,6 +24,7 @@ HOSTED_VALIDATION_PLAN = ROOT / "docs/plans/2026-06-10-hosted-project-validation
 SWIFT_5_BUILD_PLAN = ROOT / "docs/plans/2026-06-10-swift-5-app-build.md"
 HOSTED_XCTEST_PLAN = ROOT / "docs/plans/2026-06-12-hosted-xctest.md"
 PRESENTATION_PLAN = ROOT / "docs/plans/2026-06-12-battery-presentation-normalization.md"
+APPEARANCE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-13-battery-view-appearance-refresh.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -104,6 +105,27 @@ def strip_swift_line_comments(text):
     return "\n".join(stripped_lines)
 
 
+def swift_function_body(text, signature):
+    start = text.find(signature)
+    if start == -1:
+        return ""
+
+    body_start = text.find("{", start)
+    if body_start == -1:
+        return ""
+
+    depth = 0
+    for index in range(body_start, len(text)):
+        character = text[index]
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return text[body_start + 1:index]
+    return ""
+
+
 def require_order(text, tokens, message, failures):
     position = -1
     for token in tokens:
@@ -167,6 +189,7 @@ def main():
         "docs/plans/2026-06-10-hosted-project-validation.md",
         "docs/plans/2026-06-10-swift-5-app-build.md",
         "docs/plans/2026-06-12-hosted-xctest.md",
+        "docs/plans/2026-06-13-battery-view-appearance-refresh.md",
         "docs/readme-overview.svg",
         "scripts/run-tests.sh",
     ]
@@ -188,6 +211,7 @@ def main():
     project = read("ChargeMe.xcodeproj/project.pbxproj")
     view_controller = read("ChargeMe/ViewController.swift")
     tests = read("ChargeMeTests/ChargeMeTests.swift")
+    active_view_controller = strip_swift_line_comments(view_controller)
     active_sources = "\n".join([
         strip_swift_line_comments(read("ChargeMe/AppDelegate.swift")),
         strip_swift_line_comments(view_controller),
@@ -216,7 +240,10 @@ def main():
     swift_5_build_plan = SWIFT_5_BUILD_PLAN.read_text(encoding="utf-8") if SWIFT_5_BUILD_PLAN.exists() else ""
     hosted_xctest_plan = HOSTED_XCTEST_PLAN.read_text(encoding="utf-8") if HOSTED_XCTEST_PLAN.exists() else ""
     presentation_plan = PRESENTATION_PLAN.read_text(encoding="utf-8") if PRESENTATION_PLAN.exists() else ""
+    appearance_refresh_plan = APPEARANCE_REFRESH_PLAN.read_text(encoding="utf-8") if APPEARANCE_REFRESH_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
+    view_did_load = swift_function_body(active_view_controller, "override func viewDidLoad")
+    view_will_appear = swift_function_body(active_view_controller, "override func viewWillAppear")
 
     subprocess.check_call(["sh", "-n", "scripts/run-tests.sh"], cwd=ROOT)
     require((ROOT / "scripts/run-tests.sh").stat().st_mode & 0o111,
@@ -253,8 +280,11 @@ def main():
     require("isBatteryMonitoringEnabled = true" in view_controller,
             "ViewController must enable battery monitoring before reading batteryLevel",
             failures)
-    require("func readBatteryLevel() -> Float?" in view_controller and "displayBatteryLevel(readBatteryLevel())" in view_controller,
-            "ViewController must keep battery reads in an explicit optional helper displayed from viewDidLoad",
+    require("func readBatteryLevel() -> Float?" in view_controller and
+            "configureBatteryLevelLabel()" in view_did_load and
+            "displayBatteryLevel(readBatteryLevel())" not in view_did_load and
+            view_controller.count("displayBatteryLevel(readBatteryLevel())") == 1,
+            "ViewController must configure without sampling during viewDidLoad",
             failures)
     require("let batteryLevelLabel = UILabel()" in view_controller and
             "func configureBatteryLevelLabel()" in view_controller and
@@ -282,12 +312,12 @@ def main():
             "Battery presentation formatters must normalize values before displaying percentages",
             failures)
     require_order(
-        view_controller,
+        view_will_appear,
         [
-            "configureBatteryLevelLabel()",
+            "super.viewWillAppear(animated)",
             "displayBatteryLevel(readBatteryLevel())",
         ],
-        "ViewController must configure the battery label before displaying the sampled value",
+        "ViewController must refresh the sampled battery value after super.viewWillAppear",
         failures,
     )
     require("func normalizedBatteryLevel(_ batteryLevel: Float) -> Float?" in view_controller and
@@ -326,6 +356,15 @@ def main():
             '"0%"' in tests and
             "testBatteryLevelAccessibilityValueShowsUnknownWhenMissing" in tests and
             "testBatteryLevelAccessibilityValueShowsUnknownForInvalidValues" in tests and
+            "testViewAppearanceRefreshesVisibleAndAccessibleBatteryLevel" in tests and
+            "controller.loadViewIfNeeded()" in tests and
+            tests.count("controller.viewWillAppear(false)") == 2 and
+            "XCTAssertEqual(controller.batteryReadCount, 0" in tests and
+            "XCTAssertEqual(controller.batteryReadCount, 2)" in tests and
+            'XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 25%")' in tests and
+            'XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "25%")' in tests and
+            'XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")' in tests and
+            'XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")' in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
             failures)
@@ -368,6 +407,9 @@ def main():
     require("visible" in readme.lower() and "Battery Level: Unknown" in readme and "accessibility value" in readme.lower(),
             "README must document visible battery-level display behavior",
             failures)
+    require("view appearance" in readme.lower(),
+            "README must document battery refresh on view appearance",
+            failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
             failures)
@@ -375,12 +417,21 @@ def main():
             "defer" in vision.lower() and "unknown" in vision.lower() and "out-of-range" in vision.lower() and "non-finite" in vision.lower() and "zero" in vision.lower() and "visible" in vision.lower() and "accessibility value" in vision.lower(),
             "VISION must describe the current static privacy baseline",
             failures)
+    require("view appearance" in vision.lower(),
+            "VISION must preserve fresh battery reads on view appearance",
+            failures)
     require("battery" in security.lower() and "make check" in security and "GitHub Actions" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower() and "accessibility value" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
+            failures)
+    require("view appearance" in security.lower(),
+            "SECURITY must document appearance-scoped local battery refresh",
             failures)
     require("battery monitoring" in changes.lower() and "GitHub Actions" in changes and "make check" in changes and "make lint" in changes and "make test" in changes and "make build" in changes and "restores" in changes and
             "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower() and "visible" in changes.lower() and "accessibility value" in changes.lower(),
             "CHANGES must record the battery monitoring fix, unknown-level normalization, deferred restoration, and baseline",
+            failures)
+    require("view appearance" in changes.lower(),
+            "CHANGES must record appearance-time battery refresh",
             failures)
     require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
             "status: completed" in defer_plan and "status: completed" in unknown_level_plan,
@@ -416,6 +467,11 @@ def main():
     require("status: completed" in hosted_xctest_plan and "make test" in hosted_xctest_plan and
             "hosted macOS XCTest run" in hosted_xctest_plan,
             "hosted XCTest plan must record the completed executable test contract",
+            failures)
+    require("status: completed" in appearance_refresh_plan and
+            "All four Make gates" in appearance_refresh_plan and
+            "hostile mutations" in appearance_refresh_plan.lower(),
+            "battery view appearance plan must record completed status and actual verification",
             failures)
     presentation_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", presentation_plan)
     presentation_work = markdown_section(presentation_plan, "Work Completed")

@@ -32,6 +32,8 @@ Helpful reports include:
 - `make check` runs a static baseline that guards plist/storyboard metadata, Xcode project wiring, source inventory, XCTest testability, visible local battery-level display, accessibility value exposure, zero battery-level preservation, unknown, non-finite, and out-of-range battery-level normalization, battery-monitoring behavior and restoration, and logging/network regressions when Xcode is unavailable.
 - Text and accessibility formatters normalize inputs at the presentation
   boundary before exposing percentages.
+- Each view appearance should refresh through the scoped local read rather than
+  retaining battery state or enabling long-lived monitoring.
 - The pinned GitHub Actions macOS workflow uses read-only repository permissions
   without persisted checkout credentials and executes the unit-test suite in
   an unsigned simulator build without reading live battery state, deploying,

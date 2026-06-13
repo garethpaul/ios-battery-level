@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-13
+
+- Refreshed visible and accessibility battery values on each view appearance
+  instead of keeping the initial load-time reading.
+
 ## 2026-06-12
 
 - Added a shared Xcode scheme and portable simulator discovery so hosted macOS

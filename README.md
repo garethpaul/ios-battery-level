@@ -70,10 +70,12 @@ on hosts without the legacy Xcode toolchain, so the standard local gate commands
 stay available while preserving the single source of truth.
 
 The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label, accessibility value, and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
+Each view appearance performs a fresh scoped read, updating both visible text and
+the accessibility value without leaving battery monitoring enabled.
 
 The pinned GitHub Actions check runs `make test` on `macos-15`. It first runs
 the static baseline, then compiles the unsigned Swift 5 app and executes the
-twelve battery normalization, formatting, and accessibility tests on an
+fifteen battery lifecycle, normalization, formatting, and accessibility tests on an
 available iPhone simulator. It does not read live battery state, alter device
 monitoring outside test process lifetime, deploy, or use signing material.
 
@@ -91,6 +93,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Review changes touching network requests, sockets, or service endpoints; examples from the scan include ChargeMe/Info.plist, ChargeMeTests/Info.plist.
 - Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include ChargeMe/Info.plist, ChargeMeTests/Info.plist.
 - Battery and device state are local diagnostic signals. Avoid logging, persisting, uploading, or profiling this data unless the data flow and user consent are documented first.
+- Keep each view appearance refresh tied to the scoped battery read helper.
 
 ## Maintenance Notes
 
@@ -109,6 +112,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   `docs/plans/2026-06-10-swift-5-app-build.md` for its macOS build evolution.
 - See `docs/plans/2026-06-12-hosted-xctest.md` for the shared scheme,
   simulator discovery, and hosted XCTest gate.
+- See `docs/plans/2026-06-13-battery-view-appearance-refresh.md` for fresh
+  appearance-time presentation.
 - Run `make lint`, `make test`, `make build`, and `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 
 ## Contributing

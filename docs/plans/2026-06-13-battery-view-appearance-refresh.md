@@ -1,6 +1,6 @@
 # Battery View Appearance Refresh
 
-status: planned
+status: completed
 
 ## Context
 
@@ -69,3 +69,19 @@ normalization, formatting, accessibility, and monitoring behavior.
 - Hostile mutations restoring the load-time read, removing the appearance hook,
   super call, read/display ordering, repeated-appearance assertions, plan status,
   or verification evidence must be rejected.
+
+## Verification Completed
+
+- All four Make gates (`make lint`, `make test`, `make build`, and
+  `make check`) passed against the completed implementation and plan.
+- `python3 -m py_compile scripts/check-baseline.py`, `sh -n
+  scripts/run-tests.sh`, available plist/XML/workflow parsers, and
+  `git diff --check` passed.
+- A prepared baseline passed and nine hostile mutations were rejected. They
+  restored load-time sampling, removed the appearance hook or super call,
+  reversed refresh ordering, removed the repeated appearance or refreshed text
+  or accessibility assertions, reopened the plan, or removed verification
+  evidence.
+- `xcodebuild` was unavailable on this Linux host, so the fifteen-test simulator
+  suite was not executed locally. The canonical test runner reported that
+  limitation; hosted macOS remains responsible for executable XCTest evidence.

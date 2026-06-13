@@ -16,9 +16,13 @@ class ViewController: UIViewController {
         super.viewDidLoad()
 
         configureBatteryLevelLabel()
-        displayBatteryLevel(readBatteryLevel())
 
         // Do any additional setup after loading the view, typically from a nib.
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        displayBatteryLevel(readBatteryLevel())
     }
 
     func configureBatteryLevelLabel() {

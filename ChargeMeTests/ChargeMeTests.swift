@@ -10,7 +10,35 @@ import UIKit
 import XCTest
 @testable import ChargeMe
 
+private final class StubBatteryViewController: ViewController {
+    var stubbedBatteryLevel: Float?
+    var batteryReadCount = 0
+
+    override func readBatteryLevel() -> Float? {
+        batteryReadCount += 1
+        return stubbedBatteryLevel
+    }
+}
+
 class ChargeMeTests: XCTestCase {
+
+    func testViewAppearanceRefreshesVisibleAndAccessibleBatteryLevel() {
+        let controller = StubBatteryViewController()
+        controller.stubbedBatteryLevel = 0.25
+        controller.loadViewIfNeeded()
+
+        XCTAssertEqual(controller.batteryReadCount, 0, "View loading should only configure the label")
+
+        controller.viewWillAppear(false)
+        XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 25%")
+        XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "25%")
+
+        controller.stubbedBatteryLevel = 0.75
+        controller.viewWillAppear(false)
+        XCTAssertEqual(controller.batteryReadCount, 2)
+        XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")
+        XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
+    }
 
     func testUnknownBatteryLevelReturnsNil() {
         let controller = ViewController()
