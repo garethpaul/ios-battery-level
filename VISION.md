@@ -25,6 +25,7 @@ Priority:
   reporting
 - Keep the visible battery reading exposed as an accessibility value
 - Refresh visible and accessibility values on every view appearance
+- Reject stale queued battery callbacks by lifecycle generation
 - Restore battery monitoring state with `defer` after sample reads
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,

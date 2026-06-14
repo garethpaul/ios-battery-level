@@ -2,6 +2,8 @@
 
 ## 2026-06-14
 
+- Rejected stale queued battery callbacks by lifecycle generation so removed
+  observers cannot refresh hidden or later appearances.
 - Refresh visible and accessibility battery values on battery-level
   notifications while the view is visible, with one observer and bounded
   monitoring-state restoration.

@@ -13,6 +13,7 @@ class ViewController: UIViewController {
     let batteryLevelLabel = UILabel()
     private var batteryLevelObserver: NSObjectProtocol?
     private var wasBatteryMonitoringEnabled: Bool?
+    private var batteryUpdateGeneration = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,6 +39,8 @@ class ViewController: UIViewController {
 
     private func startBatteryLevelUpdates() {
         if batteryLevelObserver == nil {
+            batteryUpdateGeneration += 1
+            let updateGeneration = batteryUpdateGeneration
             wasBatteryMonitoringEnabled = batteryMonitoringEnabled()
             setBatteryMonitoringEnabled(true)
             batteryLevelObserver = NotificationCenter.default.addObserver(
@@ -48,7 +51,7 @@ class ViewController: UIViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.displayBatteryLevel(strongSelf.readBatteryLevel())
+                strongSelf.refreshBatteryLevel(for: updateGeneration)
             }
         }
 
@@ -56,6 +59,8 @@ class ViewController: UIViewController {
     }
 
     private func stopBatteryLevelUpdates() {
+        batteryUpdateGeneration += 1
+
         if let observer = batteryLevelObserver {
             NotificationCenter.default.removeObserver(observer)
             batteryLevelObserver = nil
@@ -65,6 +70,18 @@ class ViewController: UIViewController {
             setBatteryMonitoringEnabled(previousMonitoringState)
             wasBatteryMonitoringEnabled = nil
         }
+    }
+
+    func isBatteryUpdateGenerationActive(_ generation: Int) -> Bool {
+        return batteryLevelObserver != nil && generation == batteryUpdateGeneration
+    }
+
+    func refreshBatteryLevel(for generation: Int) {
+        guard isBatteryUpdateGenerationActive(generation) else {
+            return
+        }
+
+        displayBatteryLevel(readBatteryLevel())
     }
 
     func batteryMonitoringEnabled() -> Bool {

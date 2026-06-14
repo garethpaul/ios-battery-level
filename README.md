@@ -72,10 +72,12 @@ stay available while preserving the single source of truth.
 The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label, accessibility value, and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
 Each view appearance performs a fresh scoped read, updating both visible text and
 the accessibility value without leaving battery monitoring enabled.
+The visible lifecycle also rejects stale queued battery callbacks by lifecycle
+generation, so a removed observer cannot refresh a hidden or later appearance.
 
 The pinned GitHub Actions check runs `make test` on `macos-15`. It first runs
 the static baseline, then compiles the unsigned Swift 5 app and executes the
-fifteen battery lifecycle, normalization, formatting, and accessibility tests on an
+sixteen battery lifecycle, normalization, formatting, and accessibility tests on an
 available iPhone simulator. It does not read live battery state, alter device
 monitoring outside test process lifetime, deploy, or use signing material.
 

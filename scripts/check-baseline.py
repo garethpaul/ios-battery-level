@@ -28,6 +28,7 @@ APPEARANCE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-13-battery-view-appearance-
 LOCATION_INDEPENDENT_MAKE_PLAN = ROOT / "docs/plans/2026-06-13-location-independent-make.md"
 LIVE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-14-live-battery-level-refresh.md"
 DETERMINISTIC_LIFECYCLE_TEST_PLAN = ROOT / "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md"
+STALE_NOTIFICATION_PLAN = ROOT / "docs/plans/2026-06-14-stale-battery-notification-guard.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -198,6 +199,7 @@ def main():
         "docs/plans/2026-06-13-location-independent-make.md",
         "docs/plans/2026-06-14-live-battery-level-refresh.md",
         "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md",
+        "docs/plans/2026-06-14-stale-battery-notification-guard.md",
         "docs/readme-overview.svg",
         "scripts/run-tests.sh",
     ]
@@ -252,6 +254,7 @@ def main():
     location_independent_make_plan = LOCATION_INDEPENDENT_MAKE_PLAN.read_text(encoding="utf-8") if LOCATION_INDEPENDENT_MAKE_PLAN.exists() else ""
     live_refresh_plan = LIVE_REFRESH_PLAN.read_text(encoding="utf-8") if LIVE_REFRESH_PLAN.exists() else ""
     deterministic_lifecycle_test_plan = DETERMINISTIC_LIFECYCLE_TEST_PLAN.read_text(encoding="utf-8") if DETERMINISTIC_LIFECYCLE_TEST_PLAN.exists() else ""
+    stale_notification_plan = STALE_NOTIFICATION_PLAN.read_text(encoding="utf-8") if STALE_NOTIFICATION_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
     view_did_load = swift_function_body(active_view_controller, "override func viewDidLoad")
     view_will_appear = swift_function_body(active_view_controller, "override func viewWillAppear")
@@ -296,8 +299,7 @@ def main():
             failures)
     require("func readBatteryLevel() -> Float?" in view_controller and
             "configureBatteryLevelLabel()" in view_did_load and
-            "displayBatteryLevel(readBatteryLevel())" not in view_did_load and
-            view_controller.count("displayBatteryLevel(readBatteryLevel())") == 1,
+            "displayBatteryLevel(readBatteryLevel())" not in view_did_load,
             "ViewController must configure without sampling during viewDidLoad",
             failures)
     require("let batteryLevelLabel = UILabel()" in view_controller and
@@ -338,13 +340,15 @@ def main():
         start_battery_updates,
         [
             "if batteryLevelObserver == nil",
+            "batteryUpdateGeneration += 1",
+            "let updateGeneration = batteryUpdateGeneration",
             "wasBatteryMonitoringEnabled = batteryMonitoringEnabled()",
             "setBatteryMonitoringEnabled(true)",
             "batteryLevelObserver = NotificationCenter.default.addObserver",
             "UIDevice.batteryLevelDidChangeNotification",
             "queue: batteryNotificationQueue()",
             "[weak self]",
-            "strongSelf.displayBatteryLevel(strongSelf.readBatteryLevel())",
+            "strongSelf.refreshBatteryLevel(for: updateGeneration)",
             "displayBatteryLevel(readBatteryLevel())",
         ],
         "ViewController must enable one battery observer before refreshing visible state",
@@ -362,6 +366,7 @@ def main():
     require_order(
         stop_battery_updates,
         [
+            "batteryUpdateGeneration += 1",
             "NotificationCenter.default.removeObserver(observer)",
             "batteryLevelObserver = nil",
             "setBatteryMonitoringEnabled(previousMonitoringState)",
@@ -370,6 +375,18 @@ def main():
         "ViewController must remove the exact observer and restore monitoring state",
         failures,
     )
+    active_generation = swift_function_body(
+        active_view_controller, "func isBatteryUpdateGenerationActive"
+    )
+    guarded_refresh = swift_function_body(
+        active_view_controller, "func refreshBatteryLevel(for generation: Int)"
+    )
+    require("private var batteryUpdateGeneration = 0" in view_controller and
+            "batteryLevelObserver != nil && generation == batteryUpdateGeneration" in active_generation and
+            "guard isBatteryUpdateGenerationActive(generation) else" in guarded_refresh and
+            "displayBatteryLevel(readBatteryLevel())" in guarded_refresh,
+            "Battery callbacks must refresh only for the active observer generation",
+            failures)
     require("private var batteryLevelObserver: NSObjectProtocol?" in view_controller and
             "private var wasBatteryMonitoringEnabled: Bool?" in view_controller and
             "deinit" in view_controller and "stopBatteryLevelUpdates()" in view_controller,
@@ -426,6 +443,13 @@ def main():
             "testBatteryMonitoringIsEnabledOnlyWhileVisible" in tests and
             "XCTAssertTrue(controller.stubbedBatteryMonitoringEnabled)" in tests and
             "XCTAssertFalse(controller.stubbedBatteryMonitoringEnabled)" in tests and
+            "testStaleBatteryNotificationGenerationCannotRefreshLaterLifecycle" in tests and
+            "XCTAssertTrue(controller.isBatteryUpdateGenerationActive(1))" in tests and
+            "XCTAssertFalse(controller.isBatteryUpdateGenerationActive(1))" in tests and
+            "XCTAssertTrue(controller.isBatteryUpdateGenerationActive(3))" in tests and
+            "controller.refreshBatteryLevel(for: 1)" in tests and
+            "A stale queued callback must not refresh a later lifecycle" in tests and
+            "controller.refreshBatteryLevel(for: 3)" in tests and
             "override func batteryMonitoringEnabled() -> Bool" in tests and
             "return stubbedBatteryMonitoringEnabled" in tests and
             "override func setBatteryMonitoringEnabled(_ enabled: Bool)" in tests and
@@ -577,6 +601,37 @@ def main():
     require("simulator tests isolated" in read("CHANGES.md") and
             "simulator tests isolated" in read("AGENTS.md"),
             "Project guidance must document deterministic battery lifecycle tests",
+            failures)
+    normalized_guidance = [
+        " ".join(document.lower().split())
+        for document in [readme, vision, security, changes, read("AGENTS.md")]
+    ]
+    require(all("stale queued battery callbacks" in document and
+                "lifecycle generation" in document
+                for document in normalized_guidance),
+            "Project guidance must document stale battery callback rejection",
+            failures)
+    stale_notification_statuses = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", stale_notification_plan
+    )
+    stale_notification_verification = markdown_section(
+        stale_notification_plan, "Verification Completed"
+    )
+    stale_notification_required = (
+        "All four Make gates",
+        "absolute Makefile check",
+        "python3 -m py_compile scripts/check-baseline.py",
+        "sh -n scripts/run-tests.sh",
+        "Five isolated hostile mutations",
+        "git diff --check",
+        "xcodebuild was unavailable",
+    )
+    require(stale_notification_statuses == ["completed"]
+            and all(item in stale_notification_verification
+                    for item in stale_notification_required)
+            and not re.search(r"(?i)\b(?:pending|todo|tbd|not run)\b",
+                              stale_notification_verification),
+            "stale battery notification plan must record completed verification",
             failures)
     location_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", location_independent_make_plan)
     location_verification = markdown_section(location_independent_make_plan, "Verification Completed")

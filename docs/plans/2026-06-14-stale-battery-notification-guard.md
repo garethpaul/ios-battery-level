@@ -1,6 +1,6 @@
 # Stale Battery Notification Guard
 
-status: planned
+status: completed
 
 ## Context
 
@@ -45,8 +45,25 @@ or physical-device setting is otherwise changed.
 
 ## Work Completed
 
-Pending implementation.
+- Added a monotonic battery-update generation that is captured when the
+  observer is installed and invalidated before teardown.
+- Routed notification refresh through an active-generation predicate so stale
+  queued callbacks cannot read or display battery state.
+- Added deterministic XCTest coverage, mutation-sensitive static contracts,
+  and synchronized lifecycle and privacy guidance.
 
 ## Verification Completed
 
-Pending implementation and exact evidence.
+- All four Make gates passed in an isolated completed-plan preflight copy and
+  again in the implementation worktree.
+- The absolute Makefile check passed from an external directory.
+- `python3 -m py_compile scripts/check-baseline.py` passed; its exact generated
+  bytecode path was removed before the final artifact audit.
+- `sh -n scripts/run-tests.sh` passed.
+- Five isolated hostile mutations were rejected: removing the start increment,
+  generation capture, callback guard, teardown invalidation, or XCTest
+  discovery each failed the maintained baseline.
+- `git diff --check` passed, along with exact intended-path, generated-artifact,
+  changed-line credential, privacy, dependency, project, workflow, scheme, and
+  runner-preservation audits.
+- Local `xcodebuild was unavailable`; no local XCTest execution is claimed.

@@ -93,6 +93,30 @@ class ChargeMeTests: XCTestCase {
         XCTAssertFalse(controller.stubbedBatteryMonitoringEnabled)
     }
 
+    func testStaleBatteryNotificationGenerationCannotRefreshLaterLifecycle() {
+        let controller = StubBatteryViewController()
+        controller.stubbedBatteryLevel = 0.25
+        controller.loadViewIfNeeded()
+        controller.viewWillAppear(false)
+
+        XCTAssertTrue(controller.isBatteryUpdateGenerationActive(1))
+        controller.viewDidDisappear(false)
+        XCTAssertFalse(controller.isBatteryUpdateGenerationActive(1))
+
+        controller.stubbedBatteryLevel = 0.75
+        controller.viewWillAppear(false)
+        XCTAssertTrue(controller.isBatteryUpdateGenerationActive(3))
+        XCTAssertEqual(controller.batteryReadCount, 2)
+
+        controller.refreshBatteryLevel(for: 1)
+        XCTAssertEqual(controller.batteryReadCount, 2, "A stale queued callback must not refresh a later lifecycle")
+
+        controller.refreshBatteryLevel(for: 3)
+        XCTAssertEqual(controller.batteryReadCount, 3)
+        XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")
+        XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
+    }
+
     func testUnknownBatteryLevelReturnsNil() {
         let controller = ViewController()
         XCTAssertNil(controller.normalizedBatteryLevel(-1.0), "Unknown battery levels should not be treated as percentages")
