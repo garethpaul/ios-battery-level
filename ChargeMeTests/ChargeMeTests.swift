@@ -40,6 +40,53 @@ class ChargeMeTests: XCTestCase {
         XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
     }
 
+    func testBatteryNotificationRefreshesOnceWhileVisibleAndStopsAfterDisappearance() {
+        let controller = StubBatteryViewController()
+        controller.stubbedBatteryLevel = 0.25
+        controller.loadViewIfNeeded()
+        controller.viewWillAppear(false)
+        controller.viewWillAppear(false)
+
+        controller.stubbedBatteryLevel = 0.75
+        NotificationCenter.default.post(
+            name: UIDevice.batteryLevelDidChangeNotification,
+            object: UIDevice.current
+        )
+
+        XCTAssertEqual(controller.batteryReadCount, 3, "Repeated appearances must retain one battery observer")
+        XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")
+        XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
+
+        controller.viewDidDisappear(false)
+        controller.stubbedBatteryLevel = 0.5
+        NotificationCenter.default.post(
+            name: UIDevice.batteryLevelDidChangeNotification,
+            object: UIDevice.current
+        )
+
+        XCTAssertEqual(controller.batteryReadCount, 3, "Hidden views must stop receiving battery notifications")
+        XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")
+        XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
+    }
+
+    func testBatteryMonitoringIsEnabledOnlyWhileVisible() {
+        let device = UIDevice.current
+        let originalMonitoringState = device.isBatteryMonitoringEnabled
+        device.isBatteryMonitoringEnabled = false
+        defer {
+            device.isBatteryMonitoringEnabled = originalMonitoringState
+        }
+
+        let controller = StubBatteryViewController()
+        controller.stubbedBatteryLevel = 0.5
+        controller.loadViewIfNeeded()
+        controller.viewWillAppear(false)
+        XCTAssertTrue(device.isBatteryMonitoringEnabled)
+
+        controller.viewDidDisappear(false)
+        XCTAssertFalse(device.isBatteryMonitoringEnabled)
+    }
+
     func testUnknownBatteryLevelReturnsNil() {
         let controller = ViewController()
         XCTAssertNil(controller.normalizedBatteryLevel(-1.0), "Unknown battery levels should not be treated as percentages")

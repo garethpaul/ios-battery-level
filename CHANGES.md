@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-14
+
+- Refresh visible and accessibility battery values on battery-level
+  notifications while the view is visible, with one observer and bounded
+  monitoring-state restoration.
+
 ## 2026-06-13
 
 - Made every Make verification target derive the checkout root so static and

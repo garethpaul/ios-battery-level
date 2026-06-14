@@ -29,6 +29,8 @@ Helpful reports include:
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - No primary dependency manifest was detected in the repository root. If dependencies are added later, include a manifest and prefer reproducible installation instructions.
 - Battery and device state can become privacy-sensitive when logged, persisted, correlated, or transmitted. Keep the sample local-only unless a future change documents consent, retention, and data flow.
+- Battery notification observation should remain scoped to the visible view,
+  retain one observer identity, and restore the prior monitoring setting.
 - `make check` runs a static baseline that guards plist/storyboard metadata, Xcode project wiring, source inventory, XCTest testability, visible local battery-level display, accessibility value exposure, zero battery-level preservation, unknown, non-finite, and out-of-range battery-level normalization, battery-monitoring behavior and restoration, and logging/network regressions when Xcode is unavailable.
 - Text and accessibility formatters normalize inputs at the presentation
   boundary before exposing percentages.

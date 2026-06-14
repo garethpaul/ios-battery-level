@@ -11,6 +11,8 @@ import UIKit
 class ViewController: UIViewController {
 
     let batteryLevelLabel = UILabel()
+    private var batteryLevelObserver: NSObjectProtocol?
+    private var wasBatteryMonitoringEnabled: Bool?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,7 +24,48 @@ class ViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        startBatteryLevelUpdates()
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        stopBatteryLevelUpdates()
+        super.viewDidDisappear(animated)
+    }
+
+    deinit {
+        stopBatteryLevelUpdates()
+    }
+
+    private func startBatteryLevelUpdates() {
+        if batteryLevelObserver == nil {
+            let device = UIDevice.current
+            wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled
+            device.isBatteryMonitoringEnabled = true
+            batteryLevelObserver = NotificationCenter.default.addObserver(
+                forName: UIDevice.batteryLevelDidChangeNotification,
+                object: nil,
+                queue: OperationQueue.main
+            ) { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.displayBatteryLevel(strongSelf.readBatteryLevel())
+            }
+        }
+
         displayBatteryLevel(readBatteryLevel())
+    }
+
+    private func stopBatteryLevelUpdates() {
+        if let observer = batteryLevelObserver {
+            NotificationCenter.default.removeObserver(observer)
+            batteryLevelObserver = nil
+        }
+
+        if let previousMonitoringState = wasBatteryMonitoringEnabled {
+            UIDevice.current.isBatteryMonitoringEnabled = previousMonitoringState
+            wasBatteryMonitoringEnabled = nil
+        }
     }
 
     func configureBatteryLevelLabel() {
