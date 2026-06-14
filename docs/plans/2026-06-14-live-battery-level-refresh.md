@@ -71,3 +71,17 @@ Record the lifecycle invariant, actual validation, skipped physical-device cover
 
 - Linux cannot execute Xcode or observe physical battery changes; hosted macOS XCTest and later device verification remain required.
 - Notification delivery depends on monitoring being enabled before observer-driven updates, so ordering is part of the maintained contract.
+
+## Hosted XCTest Follow-Up
+
+- Both exact-head macOS jobs exposed a deterministic-test defect: the lifecycle
+  test mutated process-global `UIDevice.current` monitoring state, while the
+  notification test routed through the simulator main queue and took about 61
+  seconds.
+- Production still uses `UIDevice.current` and `OperationQueue.main`; narrow
+  overridable seams let the XCTest stub own local monitoring state and
+  synchronous notification delivery.
+- The focused static gate, root and external-directory `make check`, and six
+  follow-up hostile mutations passed. Hosted macOS XCTest remains required on
+  the new exact head and is not claimed complete until both canonical events
+  succeed.

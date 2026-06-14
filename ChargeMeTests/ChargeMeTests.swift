@@ -12,11 +12,24 @@ import XCTest
 
 private final class StubBatteryViewController: ViewController {
     var stubbedBatteryLevel: Float?
+    var stubbedBatteryMonitoringEnabled = false
     var batteryReadCount = 0
 
     override func readBatteryLevel() -> Float? {
         batteryReadCount += 1
         return stubbedBatteryLevel
+    }
+
+    override func batteryMonitoringEnabled() -> Bool {
+        return stubbedBatteryMonitoringEnabled
+    }
+
+    override func setBatteryMonitoringEnabled(_ enabled: Bool) {
+        stubbedBatteryMonitoringEnabled = enabled
+    }
+
+    override func batteryNotificationQueue() -> OperationQueue? {
+        return nil
     }
 }
 
@@ -70,21 +83,14 @@ class ChargeMeTests: XCTestCase {
     }
 
     func testBatteryMonitoringIsEnabledOnlyWhileVisible() {
-        let device = UIDevice.current
-        let originalMonitoringState = device.isBatteryMonitoringEnabled
-        device.isBatteryMonitoringEnabled = false
-        defer {
-            device.isBatteryMonitoringEnabled = originalMonitoringState
-        }
-
         let controller = StubBatteryViewController()
         controller.stubbedBatteryLevel = 0.5
         controller.loadViewIfNeeded()
         controller.viewWillAppear(false)
-        XCTAssertTrue(device.isBatteryMonitoringEnabled)
+        XCTAssertTrue(controller.stubbedBatteryMonitoringEnabled)
 
         controller.viewDidDisappear(false)
-        XCTAssertFalse(device.isBatteryMonitoringEnabled)
+        XCTAssertFalse(controller.stubbedBatteryMonitoringEnabled)
     }
 
     func testUnknownBatteryLevelReturnsNil() {

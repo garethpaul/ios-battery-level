@@ -27,6 +27,7 @@ PRESENTATION_PLAN = ROOT / "docs/plans/2026-06-12-battery-presentation-normaliza
 APPEARANCE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-13-battery-view-appearance-refresh.md"
 LOCATION_INDEPENDENT_MAKE_PLAN = ROOT / "docs/plans/2026-06-13-location-independent-make.md"
 LIVE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-14-live-battery-level-refresh.md"
+DETERMINISTIC_LIFECYCLE_TEST_PLAN = ROOT / "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -196,6 +197,7 @@ def main():
         "docs/plans/2026-06-13-battery-view-appearance-refresh.md",
         "docs/plans/2026-06-13-location-independent-make.md",
         "docs/plans/2026-06-14-live-battery-level-refresh.md",
+        "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md",
         "docs/readme-overview.svg",
         "scripts/run-tests.sh",
     ]
@@ -249,6 +251,7 @@ def main():
     appearance_refresh_plan = APPEARANCE_REFRESH_PLAN.read_text(encoding="utf-8") if APPEARANCE_REFRESH_PLAN.exists() else ""
     location_independent_make_plan = LOCATION_INDEPENDENT_MAKE_PLAN.read_text(encoding="utf-8") if LOCATION_INDEPENDENT_MAKE_PLAN.exists() else ""
     live_refresh_plan = LIVE_REFRESH_PLAN.read_text(encoding="utf-8") if LIVE_REFRESH_PLAN.exists() else ""
+    deterministic_lifecycle_test_plan = DETERMINISTIC_LIFECYCLE_TEST_PLAN.read_text(encoding="utf-8") if DETERMINISTIC_LIFECYCLE_TEST_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
     view_did_load = swift_function_body(active_view_controller, "override func viewDidLoad")
     view_will_appear = swift_function_body(active_view_controller, "override func viewWillAppear")
@@ -288,7 +291,7 @@ def main():
             ".batteryLevel" in view_controller,
             "ViewController must retain the UIDevice battery-level sample",
             failures)
-    require("isBatteryMonitoringEnabled = true" in view_controller,
+    require("setBatteryMonitoringEnabled(true)" in view_controller,
             "ViewController must enable battery monitoring before reading batteryLevel",
             failures)
     require("func readBatteryLevel() -> Float?" in view_controller and
@@ -335,10 +338,11 @@ def main():
         start_battery_updates,
         [
             "if batteryLevelObserver == nil",
-            "wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled",
-            "device.isBatteryMonitoringEnabled = true",
+            "wasBatteryMonitoringEnabled = batteryMonitoringEnabled()",
+            "setBatteryMonitoringEnabled(true)",
             "batteryLevelObserver = NotificationCenter.default.addObserver",
             "UIDevice.batteryLevelDidChangeNotification",
+            "queue: batteryNotificationQueue()",
             "[weak self]",
             "strongSelf.displayBatteryLevel(strongSelf.readBatteryLevel())",
             "displayBatteryLevel(readBatteryLevel())",
@@ -360,7 +364,7 @@ def main():
         [
             "NotificationCenter.default.removeObserver(observer)",
             "batteryLevelObserver = nil",
-            "UIDevice.current.isBatteryMonitoringEnabled = previousMonitoringState",
+            "setBatteryMonitoringEnabled(previousMonitoringState)",
             "wasBatteryMonitoringEnabled = nil",
         ],
         "ViewController must remove the exact observer and restore monitoring state",
@@ -378,10 +382,10 @@ def main():
     require_order(
         view_controller,
         [
-            "let wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled",
-            "device.isBatteryMonitoringEnabled = true",
+            "let wasBatteryMonitoringEnabled = batteryMonitoringEnabled()",
+            "setBatteryMonitoringEnabled(true)",
             "defer {",
-            "device.isBatteryMonitoringEnabled = wasBatteryMonitoringEnabled",
+            "setBatteryMonitoringEnabled(wasBatteryMonitoringEnabled)",
             "let batteryLevel = device.batteryLevel",
             "return normalizedBatteryLevel(batteryLevel)",
         ],
@@ -420,8 +424,14 @@ def main():
             "Repeated appearances must retain one battery observer" in tests and
             "Hidden views must stop receiving battery notifications" in tests and
             "testBatteryMonitoringIsEnabledOnlyWhileVisible" in tests and
-            "XCTAssertTrue(device.isBatteryMonitoringEnabled)" in tests and
-            "XCTAssertFalse(device.isBatteryMonitoringEnabled)" in tests and
+            "XCTAssertTrue(controller.stubbedBatteryMonitoringEnabled)" in tests and
+            "XCTAssertFalse(controller.stubbedBatteryMonitoringEnabled)" in tests and
+            "override func batteryMonitoringEnabled() -> Bool" in tests and
+            "return stubbedBatteryMonitoringEnabled" in tests and
+            "override func setBatteryMonitoringEnabled(_ enabled: Bool)" in tests and
+            "stubbedBatteryMonitoringEnabled = enabled" in tests and
+            "override func batteryNotificationQueue() -> OperationQueue?" in tests and
+            "return nil" in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
             failures)
@@ -546,6 +556,27 @@ def main():
             "one observer that is removed on disappearance" in read("VISION.md") and
             "Keep battery notification observation idempotent" in read("AGENTS.md"),
             "live battery refresh guidance must remain synchronized",
+            failures)
+    require("func batteryMonitoringEnabled() -> Bool" in view_controller and
+            "return UIDevice.current.isBatteryMonitoringEnabled" in view_controller and
+            "func setBatteryMonitoringEnabled(_ enabled: Bool)" in view_controller and
+            "UIDevice.current.isBatteryMonitoringEnabled = enabled" in view_controller and
+            "func batteryNotificationQueue() -> OperationQueue?" in view_controller and
+            "return OperationQueue.main" in view_controller,
+            "Production battery lifecycle seams must preserve UIDevice and main-queue behavior",
+            failures)
+    deterministic_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", deterministic_lifecycle_test_plan)
+    deterministic_verification = markdown_section(deterministic_lifecycle_test_plan, "Verification Completed")
+    require(deterministic_statuses == ["completed"] and
+            "Both old-head hosted macOS events failed" in deterministic_verification and
+            "root and external-directory `make check`" in deterministic_verification and
+            "six isolated hostile mutations" in deterministic_verification.lower() and
+            "new exact head" in deterministic_verification,
+            "deterministic lifecycle XCTest plan must record completed local and pending hosted evidence",
+            failures)
+    require("simulator tests isolated" in read("CHANGES.md") and
+            "simulator tests isolated" in read("AGENTS.md"),
+            "Project guidance must document deterministic battery lifecycle tests",
             failures)
     location_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", location_independent_make_plan)
     location_verification = markdown_section(location_independent_make_plan, "Verification Completed")

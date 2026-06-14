@@ -5,6 +5,9 @@
 - Refresh visible and accessibility battery values on battery-level
   notifications while the view is visible, with one observer and bounded
   monitoring-state restoration.
+- Kept simulator tests isolated from process-global battery monitoring state
+  and main-queue notification stalls while preserving production UIKit
+  behavior.
 
 ## 2026-06-13
 

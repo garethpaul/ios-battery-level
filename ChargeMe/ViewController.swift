@@ -38,13 +38,12 @@ class ViewController: UIViewController {
 
     private func startBatteryLevelUpdates() {
         if batteryLevelObserver == nil {
-            let device = UIDevice.current
-            wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled
-            device.isBatteryMonitoringEnabled = true
+            wasBatteryMonitoringEnabled = batteryMonitoringEnabled()
+            setBatteryMonitoringEnabled(true)
             batteryLevelObserver = NotificationCenter.default.addObserver(
                 forName: UIDevice.batteryLevelDidChangeNotification,
                 object: nil,
-                queue: OperationQueue.main
+                queue: batteryNotificationQueue()
             ) { [weak self] _ in
                 guard let strongSelf = self else {
                     return
@@ -63,9 +62,21 @@ class ViewController: UIViewController {
         }
 
         if let previousMonitoringState = wasBatteryMonitoringEnabled {
-            UIDevice.current.isBatteryMonitoringEnabled = previousMonitoringState
+            setBatteryMonitoringEnabled(previousMonitoringState)
             wasBatteryMonitoringEnabled = nil
         }
+    }
+
+    func batteryMonitoringEnabled() -> Bool {
+        return UIDevice.current.isBatteryMonitoringEnabled
+    }
+
+    func setBatteryMonitoringEnabled(_ enabled: Bool) {
+        UIDevice.current.isBatteryMonitoringEnabled = enabled
+    }
+
+    func batteryNotificationQueue() -> OperationQueue? {
+        return OperationQueue.main
     }
 
     func configureBatteryLevelLabel() {
@@ -81,10 +92,10 @@ class ViewController: UIViewController {
 
     func readBatteryLevel() -> Float? {
         let device = UIDevice.current
-        let wasBatteryMonitoringEnabled = device.isBatteryMonitoringEnabled
-        device.isBatteryMonitoringEnabled = true
+        let wasBatteryMonitoringEnabled = batteryMonitoringEnabled()
+        setBatteryMonitoringEnabled(true)
         defer {
-            device.isBatteryMonitoringEnabled = wasBatteryMonitoringEnabled
+            setBatteryMonitoringEnabled(wasBatteryMonitoringEnabled)
         }
 
         let batteryLevel = device.batteryLevel
