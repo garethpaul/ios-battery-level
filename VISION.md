@@ -70,8 +70,9 @@ Text and accessibility presentation revalidate inputs so direct callers cannot
 expose non-finite or out-of-range percentages.
 Each view appearance should perform a fresh scoped read without changing the
 caller's prior battery-monitoring setting.
-While visible, battery-level notifications should refresh both text and
-accessibility state through one observer that is removed on disappearance.
+While visible, battery-level and application-active notifications should
+refresh both text and accessibility state through scoped main-queue observers
+that are removed on disappearance.
 On macOS, the baseline should compile an unsigned simulator build without
 launching the app, reading device battery state, or changing monitoring behavior.
 

@@ -46,11 +46,12 @@
 - Battery and device state are local diagnostic signals. Avoid logging, persisting, uploading, or profiling this data unless the data flow and user consent are documented first.
 - Normalize battery values again at presentation boundaries before exposing
   text or accessibility percentages.
-- Keep battery notification observation idempotent and visible-lifecycle
-  scoped; remove the exact observer and restore prior monitoring state.
+- Keep battery and application-active notification observation idempotent and
+  visible-lifecycle scoped; remove both exact observers from the same center
+  and restore prior monitoring state.
 - Reject stale queued battery callbacks by lifecycle generation.
-- Keep simulator tests isolated from process-global battery monitoring and use
-  synchronous notification delivery only through the test subclass seams.
+- Keep simulator tests isolated from process-global battery monitoring and
+  use synchronous notification delivery through the test subclass seams.
 - This looks like an Apple platform project or sample. Xcode, Swift, CocoaPods, and deployment target versions may need to match the original project era.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.

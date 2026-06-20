@@ -51,7 +51,11 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
 ## Running or Using the Project
 
 - Open `ChargeMe.xcodeproj` in Xcode, choose the app or sample scheme, and run it on the matching simulator/device.
-- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, preserves zero and other valid levels, normalizes unknown, non-finite, or out-of-range levels to `nil`, revalidates values at the presentation boundary, shows the value in a visible local label such as `Battery Level: Unknown`, exposes the current reading as an accessibility value, then uses `defer` to restore the previous monitoring state.
+- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, preserves zero and other valid levels, normalizes unknown, non-finite, or out-of-range levels to `nil`, revalidates values at the presentation boundary, rounds percentages consistently for text and accessibility, shows the value in a visible local label such as `Battery Level: Unknown`, exposes the current reading as an accessibility value, then uses `defer` to restore the previous monitoring state.
+- While visible, the controller owns exact battery-level and application-active
+  observer tokens. Both deliver on the main queue, refresh the same local
+  presentation path, reject stale lifecycle generations, and are removed
+  before the prior battery-monitoring state is restored.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
 ## Testing and Verification

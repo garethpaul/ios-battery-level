@@ -1,12 +1,20 @@
 # Changes
 
+## 2026-06-19
+
+- Refresh the visible battery presentation when the application becomes active.
+- Isolate lifecycle tests with a private notification center and exact battery
+  notification object, while removing both observer tokens during teardown.
+- Use explicit finite validation and deterministic half-away-from-zero
+  percentage rounding for visible and accessibility values.
+
 ## 2026-06-14
 
 - Rejected stale queued battery callbacks by lifecycle generation so removed
   observers cannot refresh hidden or later appearances.
-- Refresh visible and accessibility battery values on battery-level
-  notifications while the view is visible, with one observer and bounded
-  monitoring-state restoration.
+- Refresh visible and accessibility battery values on battery-level and
+  application-active notifications while the view is visible, with scoped
+  observers and bounded monitoring-state restoration.
 - Kept simulator tests isolated from process-global battery monitoring state
   and main-queue notification stalls while preserving production UIKit
   behavior.

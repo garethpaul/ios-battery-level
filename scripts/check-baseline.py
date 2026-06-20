@@ -200,6 +200,7 @@ def main():
         "docs/plans/2026-06-14-live-battery-level-refresh.md",
         "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md",
         "docs/plans/2026-06-14-stale-battery-notification-guard.md",
+        "docs/plans/2026-06-19-battery-lifecycle-deep-review.md",
         "docs/readme-overview.svg",
         "scripts/run-tests.sh",
     ]
@@ -315,16 +316,17 @@ def main():
             failures)
     require("func batteryLevelText(_ batteryLevel: Float?) -> String" in view_controller and
             "Battery Level: Unknown" in view_controller and
-            'String(format: "Battery Level: %.0f%%"' in view_controller,
+            'return "Battery Level: \\(percentage)%"' in view_controller,
             "ViewController must format known and unknown battery levels for display",
             failures)
     require("func batteryLevelAccessibilityValue(_ batteryLevel: Float?) -> String" in view_controller and
             'return "Unknown"' in view_controller and
-            'String(format: "%.0f%%"' in view_controller,
+            'return "\\(percentage)%"' in view_controller,
             "ViewController must expose known and unknown battery levels as accessibility values",
             failures)
-    require(view_controller.count("let normalizedLevel = normalizedBatteryLevel(batteryLevel)") == 2 and
-            view_controller.count("Double(normalizedLevel * 100.0)") == 2,
+    require("func batteryPercentage(_ batteryLevel: Float?) -> Int?" in view_controller and
+            "let normalizedLevel = normalizedBatteryLevel(batteryLevel)" in view_controller and
+            "rounded(.toNearestOrAwayFromZero)" in view_controller,
             "Battery presentation formatters must normalize values before displaying percentages",
             failures)
     require_order(
@@ -342,16 +344,21 @@ def main():
             "if batteryLevelObserver == nil",
             "batteryUpdateGeneration += 1",
             "let updateGeneration = batteryUpdateGeneration",
+            "let center = notificationCenter()",
+            "observedNotificationCenter = center",
             "wasBatteryMonitoringEnabled = batteryMonitoringEnabled()",
             "setBatteryMonitoringEnabled(true)",
-            "batteryLevelObserver = NotificationCenter.default.addObserver",
+            "batteryLevelObserver = center.addObserver",
             "UIDevice.batteryLevelDidChangeNotification",
+            "object: batteryNotificationObject()",
             "queue: batteryNotificationQueue()",
             "[weak self]",
-            "strongSelf.refreshBatteryLevel(for: updateGeneration)",
+            "self?.refreshBatteryLevel(for: updateGeneration)",
+            "applicationDidBecomeActiveObserver = center.addObserver",
+            "UIApplication.didBecomeActiveNotification",
             "displayBatteryLevel(readBatteryLevel())",
         ],
-        "ViewController must enable one battery observer before refreshing visible state",
+        "ViewController must enable scoped battery and foreground observers before refreshing visible state",
         failures,
     )
     require_order(
@@ -367,8 +374,11 @@ def main():
         stop_battery_updates,
         [
             "batteryUpdateGeneration += 1",
-            "NotificationCenter.default.removeObserver(observer)",
+            "if let center = observedNotificationCenter",
+            "center.removeObserver(observer)",
             "batteryLevelObserver = nil",
+            "applicationDidBecomeActiveObserver = nil",
+            "observedNotificationCenter = nil",
             "setBatteryMonitoringEnabled(previousMonitoringState)",
             "wasBatteryMonitoringEnabled = nil",
         ],
@@ -382,17 +392,22 @@ def main():
         active_view_controller, "func refreshBatteryLevel(for generation: Int)"
     )
     require("private var batteryUpdateGeneration = 0" in view_controller and
-            "batteryLevelObserver != nil && generation == batteryUpdateGeneration" in active_generation and
+            "batteryLevelObserver != nil" in active_generation and
+            "applicationDidBecomeActiveObserver != nil" in active_generation and
+            "generation == batteryUpdateGeneration" in active_generation and
             "guard isBatteryUpdateGenerationActive(generation) else" in guarded_refresh and
             "displayBatteryLevel(readBatteryLevel())" in guarded_refresh,
             "Battery callbacks must refresh only for the active observer generation",
             failures)
     require("private var batteryLevelObserver: NSObjectProtocol?" in view_controller and
+            "private var applicationDidBecomeActiveObserver: NSObjectProtocol?" in view_controller and
+            "private var observedNotificationCenter: NotificationCenter?" in view_controller and
             "private var wasBatteryMonitoringEnabled: Bool?" in view_controller and
             "deinit" in view_controller and "stopBatteryLevelUpdates()" in view_controller,
             "ViewController must retain and clean up battery update lifecycle identity",
             failures)
     require("func normalizedBatteryLevel(_ batteryLevel: Float) -> Float?" in view_controller and
+            "!batteryLevel.isFinite" in view_controller and
             "!(batteryLevel >= 0.0 && batteryLevel <= 1.0)" in view_controller and "return nil" in view_controller,
             "ViewController must normalize unknown, non-finite, or out-of-range battery levels to nil",
             failures)
@@ -430,8 +445,8 @@ def main():
             "testBatteryLevelAccessibilityValueShowsUnknownForInvalidValues" in tests and
             "testViewAppearanceRefreshesVisibleAndAccessibleBatteryLevel" in tests and
             "controller.loadViewIfNeeded()" in tests and
-            "XCTAssertEqual(controller.batteryReadCount, 0" in tests and
-            "XCTAssertEqual(controller.batteryReadCount, 2)" in tests and
+            "XCTAssertEqual(controller.probe.readCount, 0" in tests and
+            "XCTAssertEqual(controller.probe.readCount, 2)" in tests and
             'XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 25%")' in tests and
             'XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "25%")' in tests and
             'XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")' in tests and
@@ -441,8 +456,13 @@ def main():
             "Repeated appearances must retain one battery observer" in tests and
             "Hidden views must stop receiving battery notifications" in tests and
             "testBatteryMonitoringIsEnabledOnlyWhileVisible" in tests and
-            "XCTAssertTrue(controller.stubbedBatteryMonitoringEnabled)" in tests and
-            "XCTAssertFalse(controller.stubbedBatteryMonitoringEnabled)" in tests and
+            "XCTAssertTrue(controller.probe.monitoringEnabled)" in tests and
+            "XCTAssertFalse(controller.probe.monitoringEnabled)" in tests and
+            "testBatteryMonitoringRestoresPreviouslyEnabledState" in tests and
+            "testVisibleControllerRefreshesWhenApplicationBecomesActive" in tests and
+            "UIApplication.didBecomeActiveNotification" in tests and
+            "testBatteryNotificationIgnoresUnrelatedObjects" in tests and
+            "testControllerDeinitRemovesObserversAndRestoresMonitoring" in tests and
             "testStaleBatteryNotificationGenerationCannotRefreshLaterLifecycle" in tests and
             "XCTAssertTrue(controller.isBatteryUpdateGenerationActive(1))" in tests and
             "XCTAssertFalse(controller.isBatteryUpdateGenerationActive(1))" in tests and
@@ -451,11 +471,15 @@ def main():
             "A stale queued callback must not refresh a later lifecycle" in tests and
             "controller.refreshBatteryLevel(for: 3)" in tests and
             "override func batteryMonitoringEnabled() -> Bool" in tests and
-            "return stubbedBatteryMonitoringEnabled" in tests and
+            "return probe.monitoringEnabled" in tests and
             "override func setBatteryMonitoringEnabled(_ enabled: Bool)" in tests and
-            "stubbedBatteryMonitoringEnabled = enabled" in tests and
+            "probe.monitoringEnabled = enabled" in tests and
+            "override func notificationCenter() -> NotificationCenter" in tests and
+            "override func batteryNotificationObject() -> Any?" in tests and
             "override func batteryNotificationQueue() -> OperationQueue?" in tests and
             "return nil" in tests and
+            "testBatteryPercentageRoundsHalfAwayFromZero" in tests and
+            "testInfiniteBatteryLevelsAreUnknown" in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
             failures)
@@ -575,10 +599,14 @@ def main():
             "No battery or device state was logged" in live_refresh_verification,
             "live battery refresh plan must record completed local verification",
             failures)
-    require("one observer and bounded" in read("CHANGES.md") and
-            "retain one observer identity" in read("SECURITY.md") and
-            "one observer that is removed on disappearance" in read("VISION.md") and
-            "Keep battery notification observation idempotent" in read("AGENTS.md"),
+    lifecycle_guidance = [
+        " ".join(read(path).split())
+        for path in ["CHANGES.md", "SECURITY.md", "VISION.md", "AGENTS.md"]
+    ]
+    require("scoped observers and bounded" in lifecycle_guidance[0] and
+            "retain exact observer identities" in lifecycle_guidance[1] and
+            "scoped main-queue observers" in lifecycle_guidance[2] and
+            "Keep battery and application-active notification observation idempotent" in lifecycle_guidance[3],
             "live battery refresh guidance must remain synchronized",
             failures)
     require("func batteryMonitoringEnabled() -> Bool" in view_controller and
@@ -586,7 +614,11 @@ def main():
             "func setBatteryMonitoringEnabled(_ enabled: Bool)" in view_controller and
             "UIDevice.current.isBatteryMonitoringEnabled = enabled" in view_controller and
             "func batteryNotificationQueue() -> OperationQueue?" in view_controller and
-            "return OperationQueue.main" in view_controller,
+            "return OperationQueue.main" in view_controller and
+            "func notificationCenter() -> NotificationCenter" in view_controller and
+            "return NotificationCenter.default" in view_controller and
+            "func batteryNotificationObject() -> Any?" in view_controller and
+            "return UIDevice.current" in view_controller,
             "Production battery lifecycle seams must preserve UIDevice and main-queue behavior",
             failures)
     deterministic_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", deterministic_lifecycle_test_plan)
