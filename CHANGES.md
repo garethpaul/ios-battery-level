@@ -1,5 +1,31 @@
 # Changes
 
+## 2026-06-19
+
+- Refresh the visible battery presentation when the application becomes active.
+- Isolate lifecycle tests with a private notification center and exact battery
+  notification object, while removing both observer tokens during teardown.
+- Use explicit finite validation and deterministic half-away-from-zero
+  percentage rounding for visible and accessibility values.
+
+## 2026-06-14
+
+- Rejected stale queued battery callbacks by lifecycle generation so removed
+  observers cannot refresh hidden or later appearances.
+- Refresh visible and accessibility battery values on battery-level and
+  application-active notifications while the view is visible, with scoped
+  observers and bounded monitoring-state restoration.
+- Kept simulator tests isolated from process-global battery monitoring state
+  and main-queue notification stalls while preserving production UIKit
+  behavior.
+
+## 2026-06-13
+
+- Made every Make verification target derive the checkout root so static and
+  XCTest gates work from external directories.
+- Refreshed visible and accessibility battery values on each view appearance
+  instead of keeping the initial load-time reading.
+
 ## 2026-06-12
 
 - Added a shared Xcode scheme and portable simulator discovery so hosted macOS

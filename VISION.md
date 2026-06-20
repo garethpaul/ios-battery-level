@@ -24,6 +24,8 @@ Priority:
 - Keep battery readings visible in the sample UI without adding persistence or
   reporting
 - Keep the visible battery reading exposed as an accessibility value
+- Refresh visible and accessibility values on every view appearance
+- Reject stale queued battery callbacks by lifecycle generation
 - Restore battery monitoring state with `defer` after sample reads
 - Maintain security policy for the sample
 - Keep `scripts/check-baseline.py` passing for battery-monitoring behavior,
@@ -66,6 +68,11 @@ state remains local-only with no logging, network reporting, upload, analytics,
 or persistence behavior.
 Text and accessibility presentation revalidate inputs so direct callers cannot
 expose non-finite or out-of-range percentages.
+Each view appearance should perform a fresh scoped read without changing the
+caller's prior battery-monitoring setting.
+While visible, battery-level and application-active notifications should
+refresh both text and accessibility state through scoped main-queue observers
+that are removed on disappearance.
 On macOS, the baseline should compile an unsigned simulator build without
 launching the app, reading device battery state, or changing monitoring behavior.
 

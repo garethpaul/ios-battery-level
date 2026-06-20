@@ -51,7 +51,11 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
 ## Running or Using the Project
 
 - Open `ChargeMe.xcodeproj` in Xcode, choose the app or sample scheme, and run it on the matching simulator/device.
-- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, preserves zero and other valid levels, normalizes unknown, non-finite, or out-of-range levels to `nil`, revalidates values at the presentation boundary, shows the value in a visible local label such as `Battery Level: Unknown`, exposes the current reading as an accessibility value, then uses `defer` to restore the previous monitoring state.
+- The sample enables `batteryMonitoringEnabled` before reading `UIDevice.batteryLevel`, preserves zero and other valid levels, normalizes unknown, non-finite, or out-of-range levels to `nil`, revalidates values at the presentation boundary, rounds percentages consistently for text and accessibility, shows the value in a visible local label such as `Battery Level: Unknown`, exposes the current reading as an accessibility value, then uses `defer` to restore the previous monitoring state.
+- While visible, the controller owns exact battery-level and application-active
+  observer tokens. Both deliver on the main queue, refresh the same local
+  presentation path, reject stale lifecycle generations, and are removed
+  before the prior battery-monitoring state is restored.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
 ## Testing and Verification
@@ -70,10 +74,14 @@ on hosts without the legacy Xcode toolchain, so the standard local gate commands
 stay available while preserving the single source of truth.
 
 The baseline runs `scripts/check-baseline.py`, parses plist/storyboard/project XML, checks the Swift source inventory and testability wiring, verifies that battery monitoring is enabled before reading battery level, confirms zero battery levels are preserved, confirms unknown, non-finite, or out-of-range levels normalize to `nil`, requires a visible local label, accessibility value, and focused XCTest assertions for the normalization and display helpers, verifies restoration afterward with `defer`, and guards against logging, network reporting, upload, or analytics behavior.
+Each view appearance performs a fresh scoped read, updating both visible text and
+the accessibility value without leaving battery monitoring enabled.
+The visible lifecycle also rejects stale queued battery callbacks by lifecycle
+generation, so a removed observer cannot refresh a hidden or later appearance.
 
 The pinned GitHub Actions check runs `make test` on `macos-15`. It first runs
 the static baseline, then compiles the unsigned Swift 5 app and executes the
-twelve battery normalization, formatting, and accessibility tests on an
+sixteen battery lifecycle, normalization, formatting, and accessibility tests on an
 available iPhone simulator. It does not read live battery state, alter device
 monitoring outside test process lifetime, deploy, or use signing material.
 
@@ -91,9 +99,12 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Review changes touching network requests, sockets, or service endpoints; examples from the scan include ChargeMe/Info.plist, ChargeMeTests/Info.plist.
 - Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include ChargeMe/Info.plist, ChargeMeTests/Info.plist.
 - Battery and device state are local diagnostic signals. Avoid logging, persisting, uploading, or profiling this data unless the data flow and user consent are documented first.
+- Keep each view appearance refresh tied to the scoped battery read helper.
 
 ## Maintenance Notes
 
+- Every Make verification target derives the checkout root from the loaded
+  Makefile, so an absolute Makefile path works from any working directory.
 - This looks like an Apple platform project or sample. Xcode, Swift, CocoaPods, and deployment target versions may need to match the original project era.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
@@ -109,6 +120,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   `docs/plans/2026-06-10-swift-5-app-build.md` for its macOS build evolution.
 - See `docs/plans/2026-06-12-hosted-xctest.md` for the shared scheme,
   simulator discovery, and hosted XCTest gate.
+- See `docs/plans/2026-06-13-battery-view-appearance-refresh.md` for fresh
+  appearance-time presentation.
 - Run `make lint`, `make test`, `make build`, and `make check` before pushing changes to Swift sources, plist/storyboard files, Xcode metadata, battery behavior, or privacy documentation.
 
 ## Contributing
