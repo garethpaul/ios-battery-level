@@ -164,13 +164,17 @@ class ChargeMeTests: XCTestCase {
         let probe = BatteryProbe()
         probe.level = 0.25
         let center = NotificationCenter()
-        var controller: StubBatteryViewController? = StubBatteryViewController(probe: probe, center: center)
-        let notificationObject = controller!.notificationObject
-        controller!.loadViewIfNeeded()
-        controller!.viewWillAppear(false)
-        weak var weakController = controller
+        var notificationObject: NSObject!
+        weak var weakController: StubBatteryViewController?
 
-        controller = nil
+        autoreleasepool {
+            var controller: StubBatteryViewController? = StubBatteryViewController(probe: probe, center: center)
+            notificationObject = controller!.notificationObject
+            controller!.loadViewIfNeeded()
+            controller!.viewWillAppear(false)
+            weakController = controller
+            controller = nil
+        }
 
         XCTAssertNil(weakController)
         XCTAssertFalse(probe.monitoringEnabled)
@@ -279,7 +283,7 @@ class ChargeMeTests: XCTestCase {
     func testBatteryPercentageRoundsHalfAwayFromZero() {
         let controller = ViewController()
         XCTAssertEqual(controller.batteryLevelText(0.0049), "Battery Level: 0%")
-        XCTAssertEqual(controller.batteryLevelText(0.005), "Battery Level: 1%")
+        XCTAssertEqual(controller.batteryLevelText(0.125), "Battery Level: 13%")
         XCTAssertEqual(controller.batteryLevelAccessibilityValue(0.995), "100%")
     }
 
