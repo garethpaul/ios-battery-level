@@ -1,5 +1,8 @@
 # Changes
 
+- Removed a stale numeric XCTest count from the README so the documented hosted
+  validation remains accurate as focused battery coverage grows.
+
 ## 2026-06-19
 
 - Refresh the visible battery presentation when the application becomes active.

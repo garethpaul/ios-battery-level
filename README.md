@@ -81,9 +81,10 @@ generation, so a removed observer cannot refresh a hidden or later appearance.
 
 The pinned GitHub Actions check runs `make test` on `macos-15`. It first runs
 the static baseline, then compiles the unsigned Swift 5 app and executes the
-sixteen battery lifecycle, normalization, formatting, and accessibility tests on an
-available iPhone simulator. It does not read live battery state, alter device
-monitoring outside test process lifetime, deploy, or use signing material.
+battery lifecycle, normalization, formatting, and accessibility XCTest suite on
+an available iPhone simulator. It does not read live battery state, alter
+device monitoring outside test process lifetime, deploy, or use signing
+material.
 
 For runtime verification on macOS, launch the sample on a simulator or device
 and confirm the visible and accessibility values match the local battery state.
