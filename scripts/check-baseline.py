@@ -142,6 +142,27 @@ def require_order(text, tokens, message, failures):
         position = next_position
 
 
+def xcode_build_setting(project, configuration_uuid, configuration_name, setting_name):
+    match = re.search(
+        rf"(?ms)^\s*{re.escape(configuration_uuid)} /\* {re.escape(configuration_name)} \*/ = \{{\n"
+        r"\s*isa = XCBuildConfiguration;\n"
+        r"\s*buildSettings = \{\n"
+        r"(?P<settings>.*?)"
+        r"^\s*\};\n"
+        rf"\s*name = {re.escape(configuration_name)};\n"
+        r"\s*\};$",
+        project,
+    )
+    if not match:
+        return None
+
+    settings = re.findall(
+        rf"(?m)^\s*{re.escape(setting_name)} = (?P<value>[^;]+);$",
+        match.group("settings"),
+    )
+    return settings[0].strip('"') if len(settings) == 1 else None
+
+
 def parse_xml(relative_path, failures):
     try:
         ET.parse(str(ROOT / relative_path))
@@ -268,11 +289,72 @@ def main():
             "scripts/run-tests.sh must be executable",
             failures)
 
-    require(app_plist.get("CFBundleIdentifier", "").startswith("com.garethpaul."),
-            "ChargeMe Info.plist must keep the expected sample bundle identifier",
+    require(app_plist.get("CFBundleIdentifier") == "com.garethpaul.$(PRODUCT_NAME:rfc1034identifier)",
+            "ChargeMe Info.plist must keep its identifier template",
             failures)
-    require(test_plist.get("CFBundlePackageType") == "BNDL",
-            "ChargeMeTests Info.plist must remain a test bundle plist",
+    require(test_plist.get("CFBundleIdentifier") == "com.garethpaul.$(PRODUCT_NAME:rfc1034identifier)" and
+            test_plist.get("CFBundlePackageType") == "BNDL",
+            "ChargeMeTests Info.plist must keep its identifier template and test bundle type",
+            failures)
+    require(re.search(
+                r"(?ms)^\s*7F2D99BC1B11626500668E52 /\* ChargeMe \*/ = \{\n"
+                r"\s*isa = PBXNativeTarget;\n"
+                r"\s*buildConfigurationList = 7F2D99DC1B11626500668E52 /\* Build configuration list for PBXNativeTarget \"ChargeMe\" \*/;",
+                project,
+            ) is not None and
+            re.search(
+                r"(?ms)^\s*7F2D99D11B11626500668E52 /\* ChargeMeTests \*/ = \{\n"
+                r"\s*isa = PBXNativeTarget;\n"
+                r"\s*buildConfigurationList = 7F2D99DF1B11626500668E52 /\* Build configuration list for PBXNativeTarget \"ChargeMeTests\" \*/;",
+                project,
+            ) is not None and
+            re.search(
+                r"(?ms)^\s*7F2D99DC1B11626500668E52 /\* Build configuration list for PBXNativeTarget \"ChargeMe\" \*/ = \{.*?"
+                r"buildConfigurations = \(\s*"
+                r"7F2D99DD1B11626500668E52 /\* Debug \*/,\s*"
+                r"7F2D99DE1B11626500668E52 /\* Release \*/,\s*\);",
+                project,
+            ) is not None and
+            re.search(
+                r"(?ms)^\s*7F2D99DF1B11626500668E52 /\* Build configuration list for PBXNativeTarget \"ChargeMeTests\" \*/ = \{.*?"
+                r"buildConfigurations = \(\s*"
+                r"7F2D99E01B11626500668E52 /\* Debug \*/,\s*"
+                r"7F2D99E11B11626500668E52 /\* Release \*/,\s*\);",
+                project,
+            ) is not None,
+            "ChargeMe targets must keep their exact configuration-list and UUID mappings",
+            failures)
+    require(xcode_build_setting(
+                project,
+                "7F2D99DD1B11626500668E52",
+                "Debug",
+                "PRODUCT_BUNDLE_IDENTIFIER",
+            ) == "com.garethpaul.ChargeMe",
+            "ChargeMe Debug must keep its target-local bundle identifier",
+            failures)
+    require(xcode_build_setting(
+                project,
+                "7F2D99DE1B11626500668E52",
+                "Release",
+                "PRODUCT_BUNDLE_IDENTIFIER",
+            ) == "com.garethpaul.ChargeMe",
+            "ChargeMe Release must keep its target-local bundle identifier",
+            failures)
+    require(xcode_build_setting(
+                project,
+                "7F2D99E01B11626500668E52",
+                "Debug",
+                "PRODUCT_BUNDLE_IDENTIFIER",
+            ) == "com.garethpaul.ChargeMeTests",
+            "ChargeMeTests Debug must keep its target-local bundle identifier",
+            failures)
+    require(xcode_build_setting(
+                project,
+                "7F2D99E11B11626500668E52",
+                "Release",
+                "PRODUCT_BUNDLE_IDENTIFIER",
+            ) == "com.garethpaul.ChargeMeTests",
+            "ChargeMeTests Release must keep its target-local bundle identifier",
             failures)
     require(project.count("IPHONEOS_DEPLOYMENT_TARGET = 12.0;") == 2 and
             "IPHONEOS_DEPLOYMENT_TARGET = 8.3;" not in project and
