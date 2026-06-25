@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-25
+
+- Moved battery observer and monitoring teardown to the start of the
+  disappearance transition. Battery observers stop in viewWillDisappear before the disappearance transition continues.
+- Added focused XCTest and static contracts for transition-start cleanup.
+
 - Removed a stale numeric XCTest count from the README so the documented hosted
   validation remains accurate as focused battery coverage grows.
 

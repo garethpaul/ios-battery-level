@@ -49,6 +49,7 @@
 - Keep battery and application-active notification observation idempotent and
   visible-lifecycle scoped; remove both exact observers from the same center
   and restore prior monitoring state.
+- Battery observers stop in viewWillDisappear before the disappearance transition continues.
 - Reject stale queued battery callbacks by lifecycle generation.
 - Keep simulator tests isolated from process-global battery monitoring and
   use synchronous notification delivery through the test subclass seams.

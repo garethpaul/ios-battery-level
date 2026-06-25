@@ -29,6 +29,7 @@ LOCATION_INDEPENDENT_MAKE_PLAN = ROOT / "docs/plans/2026-06-13-location-independ
 LIVE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-14-live-battery-level-refresh.md"
 DETERMINISTIC_LIFECYCLE_TEST_PLAN = ROOT / "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md"
 STALE_NOTIFICATION_PLAN = ROOT / "docs/plans/2026-06-14-stale-battery-notification-guard.md"
+DISAPPEARANCE_BOUNDARY_PLAN = ROOT / "docs/plans/2026-06-25-battery-disappearance-boundary.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -277,10 +278,11 @@ def main():
     live_refresh_plan = LIVE_REFRESH_PLAN.read_text(encoding="utf-8") if LIVE_REFRESH_PLAN.exists() else ""
     deterministic_lifecycle_test_plan = DETERMINISTIC_LIFECYCLE_TEST_PLAN.read_text(encoding="utf-8") if DETERMINISTIC_LIFECYCLE_TEST_PLAN.exists() else ""
     stale_notification_plan = STALE_NOTIFICATION_PLAN.read_text(encoding="utf-8") if STALE_NOTIFICATION_PLAN.exists() else ""
+    disappearance_boundary_plan = DISAPPEARANCE_BOUNDARY_PLAN.read_text(encoding="utf-8") if DISAPPEARANCE_BOUNDARY_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
     view_did_load = swift_function_body(active_view_controller, "override func viewDidLoad")
     view_will_appear = swift_function_body(active_view_controller, "override func viewWillAppear")
-    view_did_disappear = swift_function_body(active_view_controller, "override func viewDidDisappear")
+    view_will_disappear = swift_function_body(active_view_controller, "override func viewWillDisappear")
     start_battery_updates = swift_function_body(active_view_controller, "func startBatteryLevelUpdates")
     stop_battery_updates = swift_function_body(active_view_controller, "func stopBatteryLevelUpdates")
 
@@ -444,12 +446,12 @@ def main():
         failures,
     )
     require_order(
-        view_did_disappear,
+        view_will_disappear,
         [
             "stopBatteryLevelUpdates()",
-            "super.viewDidDisappear(animated)",
+            "super.viewWillDisappear(animated)",
         ],
-        "ViewController must stop battery updates when it disappears",
+        "ViewController must stop battery updates before its disappearance transition",
         failures,
     )
     require_order(
@@ -537,6 +539,7 @@ def main():
             "UIDevice.batteryLevelDidChangeNotification" in tests and
             "Repeated appearances must retain one battery observer" in tests and
             "Hidden views must stop receiving battery notifications" in tests and
+            "testViewWillDisappearStopsBatteryUpdatesBeforeTransitionCompletes" in tests and
             "testBatteryMonitoringIsEnabledOnlyWhileVisible" in tests and
             "XCTAssertTrue(controller.probe.monitoringEnabled)" in tests and
             "XCTAssertFalse(controller.probe.monitoringEnabled)" in tests and
@@ -632,6 +635,19 @@ def main():
     require("view appearance" in changes.lower(),
             "CHANGES must record appearance-time battery refresh",
             failures)
+    disappearance_guidance = [
+        "Battery observers stop in viewWillDisappear before the disappearance transition continues.",
+    ]
+    for document_name, document in [
+        ("AGENTS.md", read("AGENTS.md")),
+        ("README.md", readme),
+        ("SECURITY.md", security),
+        ("VISION.md", vision),
+        ("CHANGES.md", changes),
+    ]:
+        require(all(guidance in document for guidance in disappearance_guidance),
+                f"{document_name} must document the viewWillDisappear observation boundary",
+                failures)
     require("Make verification target derive the checkout root" in changes and "external directories" in changes,
             "CHANGES must record location-independent verification", failures)
     require("status: completed" in baseline_plan and "status: completed" in lifecycle_plan and
@@ -746,6 +762,15 @@ def main():
             and not re.search(r"(?i)\b(?:pending|todo|tbd|not run)\b",
                               stale_notification_verification),
             "stale battery notification plan must record completed verification",
+            failures)
+    disappearance_statuses = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", disappearance_boundary_plan
+    )
+    require(disappearance_statuses == ["completed"] and
+            "Root and external-directory Make gates passed" in disappearance_boundary_plan and
+            "three hostile transition mutations were rejected" in disappearance_boundary_plan and
+            "xcodebuild was unavailable" in disappearance_boundary_plan,
+            "battery disappearance boundary plan must record completed verification",
             failures)
     location_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", location_independent_make_plan)
     location_verification = markdown_section(location_independent_make_plan, "Verification Completed")
