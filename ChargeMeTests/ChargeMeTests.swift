@@ -94,7 +94,7 @@ class ChargeMeTests: XCTestCase {
         XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 75%")
         XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
 
-        controller.viewDidDisappear(false)
+        controller.viewWillDisappear(false)
         controller.probe.level = 0.5
         controller.center.post(
             name: UIDevice.batteryLevelDidChangeNotification,
@@ -106,6 +106,25 @@ class ChargeMeTests: XCTestCase {
         XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "75%")
     }
 
+    func testViewWillDisappearStopsBatteryUpdatesBeforeTransitionCompletes() {
+        let controller = StubBatteryViewController()
+        controller.probe.level = 0.25
+        controller.loadViewIfNeeded()
+        controller.viewWillAppear(false)
+
+        controller.viewWillDisappear(false)
+        controller.probe.level = 0.75
+        controller.center.post(
+            name: UIDevice.batteryLevelDidChangeNotification,
+            object: controller.notificationObject
+        )
+
+        XCTAssertEqual(controller.probe.readCount, 1)
+        XCTAssertFalse(controller.probe.monitoringEnabled)
+        XCTAssertEqual(controller.batteryLevelLabel.text, "Battery Level: 25%")
+        XCTAssertEqual(controller.batteryLevelLabel.accessibilityValue, "25%")
+    }
+
     func testBatteryMonitoringIsEnabledOnlyWhileVisible() {
         let controller = StubBatteryViewController()
         controller.probe.level = 0.5
@@ -113,7 +132,7 @@ class ChargeMeTests: XCTestCase {
         controller.viewWillAppear(false)
         XCTAssertTrue(controller.probe.monitoringEnabled)
 
-        controller.viewDidDisappear(false)
+        controller.viewWillDisappear(false)
         XCTAssertFalse(controller.probe.monitoringEnabled)
     }
 
@@ -125,7 +144,7 @@ class ChargeMeTests: XCTestCase {
         controller.loadViewIfNeeded()
 
         controller.viewWillAppear(false)
-        controller.viewDidDisappear(false)
+        controller.viewWillDisappear(false)
 
         XCTAssertTrue(probe.monitoringEnabled)
     }
@@ -190,7 +209,7 @@ class ChargeMeTests: XCTestCase {
         controller.viewWillAppear(false)
 
         XCTAssertTrue(controller.isBatteryUpdateGenerationActive(1))
-        controller.viewDidDisappear(false)
+        controller.viewWillDisappear(false)
         XCTAssertFalse(controller.isBatteryUpdateGenerationActive(1))
 
         controller.probe.level = 0.75

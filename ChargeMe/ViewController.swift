@@ -30,9 +30,9 @@ class ViewController: UIViewController {
         startBatteryLevelUpdates()
     }
 
-    override func viewDidDisappear(_ animated: Bool) {
+    override func viewWillDisappear(_ animated: Bool) {
         stopBatteryLevelUpdates()
-        super.viewDidDisappear(animated)
+        super.viewWillDisappear(animated)
     }
 
     deinit {

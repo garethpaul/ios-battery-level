@@ -56,6 +56,7 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
   observer tokens. Both deliver on the main queue, refresh the same local
   presentation path, reject stale lifecycle generations, and are removed
   before the prior battery-monitoring state is restored.
+- Battery observers stop in viewWillDisappear before the disappearance transition continues.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
 ## Testing and Verification
