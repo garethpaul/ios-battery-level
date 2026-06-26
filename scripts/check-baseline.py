@@ -430,8 +430,7 @@ def main():
             "let updateGeneration = batteryUpdateGeneration",
             "let center = notificationCenter()",
             "observedNotificationCenter = center",
-            "wasBatteryMonitoringEnabled = batteryMonitoringEnabled()",
-            "setBatteryMonitoringEnabled(true)",
+            "acquireBatteryMonitoringLease()",
             "batteryLevelObserver = center.addObserver",
             "UIDevice.batteryLevelDidChangeNotification",
             "object: batteryNotificationObject()",
@@ -463,8 +462,7 @@ def main():
             "batteryLevelObserver = nil",
             "applicationDidBecomeActiveObserver = nil",
             "observedNotificationCenter = nil",
-            "setBatteryMonitoringEnabled(previousMonitoringState)",
-            "wasBatteryMonitoringEnabled = nil",
+            "releaseBatteryMonitoringLease()",
         ],
         "ViewController must remove the exact observer and restore monitoring state",
         failures,
@@ -486,10 +484,64 @@ def main():
     require("private var batteryLevelObserver: NSObjectProtocol?" in view_controller and
             "private var applicationDidBecomeActiveObserver: NSObjectProtocol?" in view_controller and
             "private var observedNotificationCenter: NotificationCenter?" in view_controller and
-            "private var wasBatteryMonitoringEnabled: Bool?" in view_controller and
+            "private var ownedBatteryMonitoringLeaseCoordinator: BatteryMonitoringLeaseCoordinator?" in view_controller and
             "deinit" in view_controller and "stopBatteryLevelUpdates()" in view_controller,
             "ViewController must retain and clean up battery update lifecycle identity",
             failures)
+    coordinator_acquire = swift_function_body(
+        active_view_controller, "func acquire(currentState: () -> Bool, setState: (Bool) -> Void)"
+    )
+    coordinator_release = swift_function_body(
+        active_view_controller, "func release(setState: (Bool) -> Void)"
+    )
+    require_order(
+        coordinator_acquire,
+        [
+            "if ownerCount == 0",
+            "initialState = currentState()",
+            "setState(true)",
+            "ownerCount += 1",
+        ],
+        "The shared coordinator must capture and enable monitoring for its first owner",
+        failures,
+    )
+    require_order(
+        coordinator_release,
+        [
+            "ownerCount -= 1",
+            "if ownerCount == 0",
+            "setState(initialState)",
+            "initialState = nil",
+        ],
+        "The shared coordinator must restore monitoring after its final owner",
+        failures,
+    )
+    acquire_monitoring_lease = swift_function_body(
+        active_view_controller, "private func acquireBatteryMonitoringLease()"
+    )
+    release_monitoring_lease = swift_function_body(
+        active_view_controller, "private func releaseBatteryMonitoringLease()"
+    )
+    require_order(
+        acquire_monitoring_lease,
+        [
+            "let coordinator = batteryMonitoringLeaseCoordinator()",
+            "ownedBatteryMonitoringLeaseCoordinator = coordinator",
+            "coordinator.acquire",
+        ],
+        "A visible controller must retain its exact monitoring coordinator before acquisition",
+        failures,
+    )
+    require_order(
+        release_monitoring_lease,
+        [
+            "guard let coordinator = ownedBatteryMonitoringLeaseCoordinator",
+            "ownedBatteryMonitoringLeaseCoordinator = nil",
+            "coordinator.release",
+        ],
+        "A hidden controller must detach exact monitoring ownership before release",
+        failures,
+    )
     require("func normalizedBatteryLevel(_ batteryLevel: Float) -> Float?" in view_controller and
             "!batteryLevel.isFinite" in view_controller and
             "!(batteryLevel >= 0.0 && batteryLevel <= 1.0)" in view_controller and "return nil" in view_controller,
@@ -544,6 +596,10 @@ def main():
             "XCTAssertTrue(controller.probe.monitoringEnabled)" in tests and
             "XCTAssertFalse(controller.probe.monitoringEnabled)" in tests and
             "testBatteryMonitoringRestoresPreviouslyEnabledState" in tests and
+            "testOverlappingControllersKeepMonitoringEnabledUntilLastDisappears" in tests and
+            tests.count("monitoringCoordinator: monitoringCoordinator") >= 2 and
+            "One controller must not disable monitoring while another remains visible" in tests and
+            "The final controller must restore the original monitoring state" in tests and
             "testVisibleControllerRefreshesWhenApplicationBecomesActive" in tests and
             "UIApplication.didBecomeActiveNotification" in tests and
             "testBatteryNotificationIgnoresUnrelatedObjects" in tests and
@@ -557,6 +613,9 @@ def main():
             "controller.refreshBatteryLevel(for: 3)" in tests and
             "override func batteryMonitoringEnabled() -> Bool" in tests and
             "return probe.monitoringEnabled" in tests and
+            "override func batteryMonitoringLeaseCoordinator() -> BatteryMonitoringLeaseCoordinator" in tests and
+            "return monitoringCoordinator" in tests and
+            "monitoringCoordinator: BatteryMonitoringLeaseCoordinator = BatteryMonitoringLeaseCoordinator()" in tests and
             "override func setBatteryMonitoringEnabled(_ enabled: Bool)" in tests and
             "probe.monitoringEnabled = enabled" in tests and
             "override func notificationCenter() -> NotificationCenter" in tests and
@@ -567,6 +626,15 @@ def main():
             "testInfiniteBatteryLevelsAreUnknown" in tests and
             "XCTAssert(true" not in tests and "testPerformanceExample" not in tests,
             "ChargeMeTests must replace template tests with battery-level normalization assertions",
+            failures)
+    require("final class BatteryMonitoringLeaseCoordinator" in view_controller and
+            "private static let sharedBatteryMonitoringLeaseCoordinator" in view_controller and
+            "private var ownedBatteryMonitoringLeaseCoordinator: BatteryMonitoringLeaseCoordinator?" in view_controller and
+            "func batteryMonitoringLeaseCoordinator() -> BatteryMonitoringLeaseCoordinator" in view_controller and
+            "return ViewController.sharedBatteryMonitoringLeaseCoordinator" in view_controller and
+            "acquireBatteryMonitoringLease()" in start_battery_updates and
+            "releaseBatteryMonitoringLease()" in stop_battery_updates,
+            "Visible controllers must share process-global battery monitoring ownership",
             failures)
     require(not re.search(r"\b(?:print|println|NSLog)\s*\(", active_sources),
             "Battery/device state must not be logged",
@@ -607,6 +675,10 @@ def main():
     require("visible" in readme.lower() and "Battery Level: Unknown" in readme and "accessibility value" in readme.lower(),
             "README must document visible battery-level display behavior",
             failures)
+    require("share ownership" in readme.lower() and "final owner" in readme.lower() and
+            "process-global" in readme.lower(),
+            "README must document shared process-global battery monitoring ownership",
+            failures)
     require("view appearance" in readme.lower(),
             "README must document battery refresh on view appearance",
             failures)
@@ -622,11 +694,19 @@ def main():
     require("view appearance" in vision.lower(),
             "VISION must preserve fresh battery reads on view appearance",
             failures)
+    require("overlapping visible controllers" in vision.lower() and
+            "process-global battery-monitoring" in vision.lower(),
+            "VISION must preserve shared battery monitoring ownership",
+            failures)
     require("battery" in security.lower() and "make check" in security and "GitHub Actions" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower() and "accessibility value" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
     require("view appearance" in security.lower(),
             "SECURITY must document appearance-scoped local battery refresh",
+            failures)
+    require("process-global shared state" in security.lower() and
+            "final owner" in security.lower(),
+            "SECURITY must document overlapping battery monitoring ownership",
             failures)
     require("battery monitoring" in changes.lower() and "GitHub Actions" in changes and "make check" in changes and "make lint" in changes and "make test" in changes and "make build" in changes and "restores" in changes and
             "defer" in changes.lower() and "unknown" in changes.lower() and "out-of-range" in changes.lower() and "non-finite" in changes.lower() and "zero" in changes.lower() and "visible" in changes.lower() and "accessibility value" in changes.lower(),
@@ -634,6 +714,9 @@ def main():
             failures)
     require("view appearance" in changes.lower(),
             "CHANGES must record appearance-time battery refresh",
+            failures)
+    require("shared visible" in changes.lower() and "final owner" in changes.lower(),
+            "CHANGES must record shared battery monitoring ownership",
             failures)
     disappearance_guidance = [
         "Battery observers stop in viewWillDisappear before the disappearance transition continues.",

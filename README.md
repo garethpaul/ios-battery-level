@@ -56,6 +56,9 @@ The checked-in project has no external dependency manifest. Use Xcode for full b
   observer tokens. Both deliver on the main queue, refresh the same local
   presentation path, reject stale lifecycle generations, and are removed
   before the prior battery-monitoring state is restored.
+- Visible controller instances share ownership of the process-global battery
+  monitoring setting. The first owner captures and enables it; the final owner
+  restores the original state, so overlapping views cannot disable each other.
 - Battery observers stop in viewWillDisappear before the disappearance transition continues.
 - Keep battery/device state local-only; do not add analytics, persistence, or network reporting without a dedicated privacy design.
 
@@ -79,6 +82,8 @@ Each view appearance performs a fresh scoped read, updating both visible text an
 the accessibility value without leaving battery monitoring enabled.
 The visible lifecycle also rejects stale queued battery callbacks by lifecycle
 generation, so a removed observer cannot refresh a hidden or later appearance.
+Focused XCTest also covers overlapping visible controllers and final-owner
+restoration of the process-global monitoring state.
 
 The pinned GitHub Actions check runs `make test` on `macos-15`. It first runs
 the static baseline, then compiles the unsigned Swift 5 app and executes the

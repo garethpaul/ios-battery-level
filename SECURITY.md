@@ -32,6 +32,8 @@ Helpful reports include:
 - Battery and application-active notification observation should remain scoped
   to the visible view, retain exact observer identities and the observed
   notification center, and restore the prior monitoring setting.
+- Treat battery monitoring as process-global shared state: overlapping visible
+  controllers must retain a lease until the final owner restores the original setting.
 - Battery observers stop in viewWillDisappear before the disappearance transition continues.
 - Battery-level notifications should accept only the owned `UIDevice` object;
   tests should use a private notification center rather than process-global

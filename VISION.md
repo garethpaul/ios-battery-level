@@ -74,6 +74,8 @@ caller's prior battery-monitoring setting.
 While visible, battery-level and application-active notifications should
 refresh both text and accessibility state through scoped main-queue observers
 that are removed on disappearance.
+Overlapping visible controllers should share process-global battery-monitoring
+ownership so only the final owner restores the original setting.
 On macOS, the baseline should compile an unsigned simulator build without
 launching the app, reading device battery state, or changing monitoring behavior.
 

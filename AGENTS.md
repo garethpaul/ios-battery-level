@@ -49,6 +49,8 @@
 - Keep battery and application-active notification observation idempotent and
   visible-lifecycle scoped; remove both exact observers from the same center
   and restore prior monitoring state.
+- Battery monitoring is process-global. Overlapping visible controllers must
+  share ownership and only the final owner may restore the captured state.
 - Battery observers stop in viewWillDisappear before the disappearance transition continues.
 - Reject stale queued battery callbacks by lifecycle generation.
 - Keep simulator tests isolated from process-global battery monitoring and
