@@ -1,5 +1,15 @@
 # Changes
 
+## 2026-06-26
+
+- Replaced per-controller battery-monitoring restoration with a shared visible
+  ownership lease for the process-global `UIDevice` setting.
+- Kept monitoring enabled while overlapping controllers remain visible and
+  restored the original process state only after the final owner disappears.
+- Added focused overlapping-lifecycle XCTest, portable ownership-order
+  contracts, parallel-test-isolated coordinator injection, and a completed
+  design record.
+
 ## 2026-06-25
 
 - Moved battery observer and monitoring teardown to the start of the

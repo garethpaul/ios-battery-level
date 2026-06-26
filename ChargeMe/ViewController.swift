@@ -8,13 +8,43 @@
 
 import UIKit
 
+final class BatteryMonitoringLeaseCoordinator {
+    private var ownerCount = 0
+    private var initialState: Bool?
+
+    func acquire(currentState: () -> Bool, setState: (Bool) -> Void) {
+        if ownerCount == 0 {
+            initialState = currentState()
+            setState(true)
+        }
+        ownerCount += 1
+    }
+
+    func release(setState: (Bool) -> Void) {
+        guard ownerCount > 0 else {
+            return
+        }
+
+        ownerCount -= 1
+        if ownerCount == 0 {
+            if let initialState = initialState {
+                setState(initialState)
+            }
+            initialState = nil
+        }
+    }
+}
+
 class ViewController: UIViewController {
+
+    private static let sharedBatteryMonitoringLeaseCoordinator =
+        BatteryMonitoringLeaseCoordinator()
 
     let batteryLevelLabel = UILabel()
     private var batteryLevelObserver: NSObjectProtocol?
     private var applicationDidBecomeActiveObserver: NSObjectProtocol?
     private var observedNotificationCenter: NotificationCenter?
-    private var wasBatteryMonitoringEnabled: Bool?
+    private var ownedBatteryMonitoringLeaseCoordinator: BatteryMonitoringLeaseCoordinator?
     private var batteryUpdateGeneration = 0
 
     override func viewDidLoad() {
@@ -45,8 +75,7 @@ class ViewController: UIViewController {
             let updateGeneration = batteryUpdateGeneration
             let center = notificationCenter()
             observedNotificationCenter = center
-            wasBatteryMonitoringEnabled = batteryMonitoringEnabled()
-            setBatteryMonitoringEnabled(true)
+            acquireBatteryMonitoringLease()
             batteryLevelObserver = center.addObserver(
                 forName: UIDevice.batteryLevelDidChangeNotification,
                 object: batteryNotificationObject(),
@@ -82,10 +111,29 @@ class ViewController: UIViewController {
         applicationDidBecomeActiveObserver = nil
         observedNotificationCenter = nil
 
-        if let previousMonitoringState = wasBatteryMonitoringEnabled {
-            setBatteryMonitoringEnabled(previousMonitoringState)
-            wasBatteryMonitoringEnabled = nil
+        releaseBatteryMonitoringLease()
+    }
+
+    private func acquireBatteryMonitoringLease() {
+        guard ownedBatteryMonitoringLeaseCoordinator == nil else {
+            return
         }
+
+        let coordinator = batteryMonitoringLeaseCoordinator()
+        ownedBatteryMonitoringLeaseCoordinator = coordinator
+        coordinator.acquire(
+            currentState: { self.batteryMonitoringEnabled() },
+            setState: { self.setBatteryMonitoringEnabled($0) }
+        )
+    }
+
+    private func releaseBatteryMonitoringLease() {
+        guard let coordinator = ownedBatteryMonitoringLeaseCoordinator else {
+            return
+        }
+
+        ownedBatteryMonitoringLeaseCoordinator = nil
+        coordinator.release { self.setBatteryMonitoringEnabled($0) }
     }
 
     func isBatteryUpdateGenerationActive(_ generation: Int) -> Bool {
@@ -104,6 +152,10 @@ class ViewController: UIViewController {
 
     func batteryMonitoringEnabled() -> Bool {
         return UIDevice.current.isBatteryMonitoringEnabled
+    }
+
+    func batteryMonitoringLeaseCoordinator() -> BatteryMonitoringLeaseCoordinator {
+        return ViewController.sharedBatteryMonitoringLeaseCoordinator
     }
 
     func setBatteryMonitoringEnabled(_ enabled: Bool) {

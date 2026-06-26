@@ -20,10 +20,16 @@ private final class StubBatteryViewController: ViewController {
     let probe: BatteryProbe
     let center: NotificationCenter
     let notificationObject = NSObject()
+    let monitoringCoordinator: BatteryMonitoringLeaseCoordinator
 
-    init(probe: BatteryProbe = BatteryProbe(), center: NotificationCenter = NotificationCenter()) {
+    init(
+        probe: BatteryProbe = BatteryProbe(),
+        center: NotificationCenter = NotificationCenter(),
+        monitoringCoordinator: BatteryMonitoringLeaseCoordinator = BatteryMonitoringLeaseCoordinator()
+    ) {
         self.probe = probe
         self.center = center
+        self.monitoringCoordinator = monitoringCoordinator
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -38,6 +44,10 @@ private final class StubBatteryViewController: ViewController {
 
     override func batteryMonitoringEnabled() -> Bool {
         return probe.monitoringEnabled
+    }
+
+    override func batteryMonitoringLeaseCoordinator() -> BatteryMonitoringLeaseCoordinator {
+        return monitoringCoordinator
     }
 
     override func setBatteryMonitoringEnabled(_ enabled: Bool) {
@@ -147,6 +157,34 @@ class ChargeMeTests: XCTestCase {
         controller.viewWillDisappear(false)
 
         XCTAssertTrue(probe.monitoringEnabled)
+    }
+
+    func testOverlappingControllersKeepMonitoringEnabledUntilLastDisappears() {
+        let probe = BatteryProbe()
+        probe.level = 0.5
+        let monitoringCoordinator = BatteryMonitoringLeaseCoordinator()
+        let firstController = StubBatteryViewController(
+            probe: probe,
+            monitoringCoordinator: monitoringCoordinator
+        )
+        let secondController = StubBatteryViewController(
+            probe: probe,
+            monitoringCoordinator: monitoringCoordinator
+        )
+        firstController.loadViewIfNeeded()
+        secondController.loadViewIfNeeded()
+
+        firstController.viewWillAppear(false)
+        secondController.viewWillAppear(false)
+        firstController.viewWillDisappear(false)
+
+        XCTAssertTrue(probe.monitoringEnabled,
+                      "One controller must not disable monitoring while another remains visible")
+
+        secondController.viewWillDisappear(false)
+
+        XCTAssertFalse(probe.monitoringEnabled,
+                       "The final controller must restore the original monitoring state")
     }
 
     func testVisibleControllerRefreshesWhenApplicationBecomesActive() {
