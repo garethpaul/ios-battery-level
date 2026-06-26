@@ -1,5 +1,61 @@
 # Changes
 
+## 2026-06-26 12:17 PDT - P2 - Reconcile hosted XCTest roadmap
+
+### Summary
+
+Reconciled the completed hosted XCTest roadmap item with the maintained shared
+scheme, pinned macOS workflow, simulator discovery, and canonical `make test`
+gate. No Swift, Xcode project, Make, or workflow behavior changed.
+
+### Work completed
+
+- Replaced the stale future claim with an ongoing roadmap and validation
+  synchronization boundary.
+- Added a fail-closed baseline contract that rejects the completed priority if
+  it returns.
+- Added design and implementation records for the evidence-backed docs change.
+
+### Threads
+
+- None. The audit was completed directly after confirming no public pull
+  requests, issues, or unmerged remote work needed finishing first.
+
+### Files changed
+
+- `VISION.md` — retired the completed hosted-test priority.
+- `scripts/check-baseline.py` — enforces the current roadmap contract.
+- `docs/plans/2026-06-26-hosted-xctest-roadmap-design.md` — records the design.
+- `docs/plans/2026-06-26-hosted-xctest-roadmap.md` — records implementation and verification.
+- `CHANGES.md` — this cycle record.
+
+### Validation
+
+- Red-first `python3 scripts/check-baseline.py` rejected the missing roadmap,
+  plan, and history evidence before documentation changed.
+- `make lint`, `make test`, `make build`, and `make check` passed from the
+  checkout and through the absolute Makefile path from `/tmp`; XCTest skipped
+  truthfully because `xcodebuild` is unavailable locally.
+- Four isolated hostile mutations rejected weakened synchronization guidance,
+  restoration of the stale priority, incomplete plan status, and missing
+  history evidence.
+- Python and shell syntax, diff, artifact, and credential-shaped-content audits
+  passed. Hosted XCTest, CodeQL, and exact-head review remain required.
+
+### Bugs / findings
+
+- P2 documentation: `VISION.md` described adding hosted XCTest after a shared
+  scheme as future work even though both have been maintained since June 12.
+
+### Blockers
+
+- None for portable validation; native Xcode evidence is hosted on macOS.
+
+### Next action
+
+- Complete local and hosted exact-head validation, then merge only the reviewed
+  green commit.
+
 ## 2026-06-26
 
 - Replaced per-controller battery-monitoring restoration with a shared visible

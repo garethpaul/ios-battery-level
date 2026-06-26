@@ -40,7 +40,7 @@ Priority:
 Next priorities:
 
 - Add a small UI or testable wrapper only if it improves the sample
-- Add test execution to hosted CI once a shared scheme is maintained
+- Keep roadmap and validation guidance synchronized with the shared scheme and hosted XCTest workflow.
 
 Contribution rules:
 

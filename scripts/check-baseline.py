@@ -30,6 +30,7 @@ LIVE_REFRESH_PLAN = ROOT / "docs/plans/2026-06-14-live-battery-level-refresh.md"
 DETERMINISTIC_LIFECYCLE_TEST_PLAN = ROOT / "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md"
 STALE_NOTIFICATION_PLAN = ROOT / "docs/plans/2026-06-14-stale-battery-notification-guard.md"
 DISAPPEARANCE_BOUNDARY_PLAN = ROOT / "docs/plans/2026-06-25-battery-disappearance-boundary.md"
+HOSTED_XCTEST_ROADMAP_PLAN = ROOT / "docs/plans/2026-06-26-hosted-xctest-roadmap.md"
 EXPECTED_WORKFLOW = """name: Check
 
 on:
@@ -223,6 +224,7 @@ def main():
         "docs/plans/2026-06-14-deterministic-battery-lifecycle-xctest.md",
         "docs/plans/2026-06-14-stale-battery-notification-guard.md",
         "docs/plans/2026-06-19-battery-lifecycle-deep-review.md",
+        "docs/plans/2026-06-26-hosted-xctest-roadmap.md",
         "docs/readme-overview.svg",
         "scripts/run-tests.sh",
     ]
@@ -279,6 +281,7 @@ def main():
     deterministic_lifecycle_test_plan = DETERMINISTIC_LIFECYCLE_TEST_PLAN.read_text(encoding="utf-8") if DETERMINISTIC_LIFECYCLE_TEST_PLAN.exists() else ""
     stale_notification_plan = STALE_NOTIFICATION_PLAN.read_text(encoding="utf-8") if STALE_NOTIFICATION_PLAN.exists() else ""
     disappearance_boundary_plan = DISAPPEARANCE_BOUNDARY_PLAN.read_text(encoding="utf-8") if DISAPPEARANCE_BOUNDARY_PLAN.exists() else ""
+    hosted_xctest_roadmap_plan = HOSTED_XCTEST_ROADMAP_PLAN.read_text(encoding="utf-8") if HOSTED_XCTEST_ROADMAP_PLAN.exists() else ""
     workflow = read(".github/workflows/check.yml")
     view_did_load = swift_function_body(active_view_controller, "override func viewDidLoad")
     view_will_appear = swift_function_body(active_view_controller, "override func viewWillAppear")
@@ -698,6 +701,10 @@ def main():
             "process-global battery-monitoring" in vision.lower(),
             "VISION must preserve shared battery monitoring ownership",
             failures)
+    require("Keep roadmap and validation guidance synchronized with the shared scheme and hosted XCTest workflow." in vision and
+            "Add test execution to hosted CI once a shared scheme is maintained" not in vision,
+            "VISION must retire the completed hosted XCTest priority and preserve synchronization guidance",
+            failures)
     require("battery" in security.lower() and "make check" in security and "GitHub Actions" in security and "unknown" in security.lower() and "out-of-range" in security.lower() and "non-finite" in security.lower() and "zero" in security.lower() and "visible" in security.lower() and "accessibility value" in security.lower(),
             "SECURITY must document battery/device-state privacy and the static baseline",
             failures)
@@ -717,6 +724,9 @@ def main():
             failures)
     require("shared visible" in changes.lower() and "final owner" in changes.lower(),
             "CHANGES must record shared battery monitoring ownership",
+            failures)
+    require("Reconciled the completed hosted XCTest roadmap item" in changes,
+            "CHANGES must record the hosted XCTest roadmap reconciliation",
             failures)
     disappearance_guidance = [
         "Battery observers stop in viewWillDisappear before the disappearance transition continues.",
@@ -767,6 +777,11 @@ def main():
     require("status: completed" in hosted_xctest_plan and "make test" in hosted_xctest_plan and
             "hosted macOS XCTest run" in hosted_xctest_plan,
             "hosted XCTest plan must record the completed executable test contract",
+            failures)
+    require("status: completed" in hosted_xctest_roadmap_plan and
+            "## Verification Completed" in hosted_xctest_roadmap_plan and
+            "four isolated hostile mutations" in hosted_xctest_roadmap_plan.lower(),
+            "hosted XCTest roadmap plan must record completed verification",
             failures)
     require("status: completed" in appearance_refresh_plan and
             "All four Make gates" in appearance_refresh_plan and
