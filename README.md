@@ -112,7 +112,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
 
 - Every Make verification target derives the checkout root from the loaded
   Makefile, so an absolute Makefile path works from any working directory,
-  including checkout paths containing spaces.
+  including checkout paths containing spaces. Exactly one repository Makefile
+  is supported; preloaded, overridden, additional, or replacement Makefiles
+  fail closed.
 - This looks like an Apple platform project or sample. Xcode, Swift, CocoaPods, and deployment target versions may need to match the original project era.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.

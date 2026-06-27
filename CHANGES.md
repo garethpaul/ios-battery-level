@@ -1,7 +1,43 @@
 # Changes
 
-- Preserved absolute Makefile roots containing spaces and added a recursive-safe full-baseline regression.
-- Rejected ambiguous Makefile inputs so later recipes cannot replace verification.
+## 2026-06-26 19:36 PDT - P1 - Make root authority
+
+### Summary
+
+Preserved absolute Makefile roots containing spaces while rejecting ambiguous
+loaded-file metadata that could redirect or replace repository verification.
+
+### Work completed
+
+- Replaced sentinel parsing with a validated single-Makefile resolver.
+- Added recursive regressions for `MAKEFILES`, overridden `MAKEFILE_LIST`,
+  additional Makefiles in both orders, and later recipe replacement.
+- Kept battery Swift sources, native tests, the Xcode project, and workflows
+  unchanged.
+
+### Threads
+
+- None; concurrent work on the same PR was reviewed and retained because its
+  recipe-replacement regression was stronger than the local draft.
+
+### Validation
+
+- Root and external-directory Make gates pass under local GNU Make 4.3.
+- Python compilation, Gitleaks, and `git diff --check` pass.
+- Local XCTest remains unavailable because `xcodebuild` is not installed.
+
+### Bugs / findings
+
+- P1: a `MAKEFILES` preload collapsed path separators into a false root, and
+  later Makefiles needed an explicit fail-closed recipe-replacement boundary.
+
+### Blockers
+
+- Hosted XCTest and CodeQL are required on the final head.
+
+### Next action
+
+- Attempt exact-head Codex review, then merge only after hosted checks pass.
 
 ## 2026-06-26 12:17 PDT - P2 - Reconcile hosted XCTest roadmap
 
