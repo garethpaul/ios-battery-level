@@ -18,7 +18,7 @@
 - Install dependencies: no repository-specific install command is documented.
 - Full baseline: `make check`
 - Hosted/local XCTest gate: `make test`
-- Make gates support absolute checkout paths containing spaces; preserve the encoded `MAKEFILE_LIST` root derivation and recursive regression.
+- Make gates support absolute checkout paths containing spaces; preserve the single-Makefile authority boundary and recursive regression.
 - Simulator overrides: `IOS_DESTINATION` or `IOS_SIMULATOR_NAME`
 - Local Apple development: `open ChargeMe.xcodeproj`
 - If a command above skips because a platform toolchain is missing, verify on a machine with that SDK before claiming platform behavior is tested.
