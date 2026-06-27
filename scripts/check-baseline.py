@@ -57,19 +57,39 @@ jobs:
       - name: Validate battery baseline and XCTest
         run: make test
 """
-EXPECTED_MAKEFILE = """.PHONY: build check lint test
+EXPECTED_MAKEFILE = """.PHONY: __repository-make-authority build check lint test
+.SECONDEXPANSION:
 
-override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+ifneq ($(strip $(MAKEFILES)),)
+$(error MAKEFILES must be empty; repository verification requires this Makefile to be loaded alone)
+endif
+override MAKEFILES :=
+ifneq ($(origin MAKEFILE_LIST),file)
+$(error MAKEFILE_LIST must not be overridden)
+endif
+override ROOT := $(shell sed_path=/usr/bin/sed; [ -x "$$sed_path" ] || sed_path=/bin/sed; [ -x "$$sed_path" ] || exit 1; path=$$(printf '%s' '$(subst ','"'"',$(value MAKEFILE_LIST))' | "$$sed_path" 's/^ //'); [ -f "$$path" ] || exit 1; directory=$${path%/*}; [ "$$directory" != "$$path" ] || directory=.; CDPATH= cd -- "$$directory" && /bin/pwd -P)
+export ROOT
+ifeq ($(strip $(ROOT)),)
+$(error repository Makefile must be loaded alone)
+endif
 
-lint: check
+build check lint test:: $$(if $$(filter file,$$(origin MAKEFILE_LIST)),,$$(error MAKEFILE_LIST must not be overridden))
+build check lint test:: $$(if $$(shell sed_path=/usr/bin/sed && [ -x "$$$$sed_path" ] || sed_path=/bin/sed && [ -x "$$$$sed_path" ] && path=$$$$(printf '%s' '$$(subst ','"'"',$$(MAKEFILE_LIST))' | "$$$$sed_path" 's/^ //') && [ -f "$$$$path" ] && printf '%s' ok),,$$(error repository Makefile must be loaded alone))
+build check lint test:: __repository-make-authority
 
-test: check
+__repository-make-authority::
+\t@:
+
+lint:: check
+
+test:: check
 \t@if command -v xcodebuild >/dev/null 2>&1; then cd "$(ROOT)" && ./scripts/run-tests.sh; else printf '%s\\n' "Skipping XCTest: xcodebuild is not installed."; fi
 
-build: check
+build:: check
 
-check:
+check::
 \t@python3 "$(ROOT)/scripts/check-baseline.py"
+\t@python3 "$(ROOT)/scripts/test-make-spaced-path.py"
 """
 
 
@@ -685,7 +705,7 @@ def main():
     require("view appearance" in readme.lower(),
             "README must document battery refresh on view appearance",
             failures)
-    require("absolute Makefile path" in readme and "any working directory" in readme,
+    require("absolute Makefile path" in readme and "any working directory" in readme and "paths containing spaces" in readme,
             "README must document location-independent verification", failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
@@ -872,7 +892,7 @@ def main():
             failures)
     location_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", location_independent_make_plan)
     location_verification = markdown_section(location_independent_make_plan, "Verification Completed")
-    location_required = ("Root and external-directory Make gates passed", "root-derivation mutation failed", "checker-invocation mutation failed", "XCTest-runner mutation failed", "plan-status mutation failed", "plan-evidence mutation failed", "documentation mutation failed")
+    location_required = ("Root and external-directory Make gates passed", "space-containing absolute Makefile paths passed", "root-derivation mutation failed", "checker-invocation mutation failed", "XCTest-runner mutation failed", "plan-status mutation failed", "plan-evidence mutation failed", "documentation mutation failed")
     require(location_statuses == ["completed"] and all(item in location_verification for item in location_required) and not re.search(r"(?i)\b(?:pending|todo|tbd|not run)\b", location_verification),
             "location-independent Make plan must record completed verification", failures)
     presentation_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", presentation_plan)
