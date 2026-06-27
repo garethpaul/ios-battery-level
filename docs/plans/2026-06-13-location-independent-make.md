@@ -4,11 +4,11 @@ status: completed
 
 ## Context
 
-Absolute Makefile invocations resolve both the checker and conditional XCTest runner relative to the caller.
+Absolute Makefile invocations resolve both the checker and conditional XCTest runner relative to the caller. GNU Make also splits loaded absolute Makefile paths containing spaces.
 
 ## Scope
 
-1. Derive the checkout root from `MAKEFILE_LIST`.
+1. Derive the checkout root from an encoded `MAKEFILE_LIST` that preserves spaces.
 2. Root the Python checker and XCTest runner.
 3. Add completed-plan, external-run, guidance, and mutation contracts.
 4. Preserve battery behavior, Swift source, tests, project, and workflow files.
@@ -30,6 +30,7 @@ Absolute Makefile invocations resolve both the checker and conditional XCTest ru
 ## Verification Completed
 
 - Root and external-directory Make gates passed for all four aliases.
+- GNU Make 4.2 and 4.4 space-containing absolute Makefile paths passed.
 - The root-derivation mutation failed.
 - The checker-invocation mutation failed.
 - The XCTest-runner mutation failed.

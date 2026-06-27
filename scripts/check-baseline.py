@@ -59,7 +59,11 @@ jobs:
 """
 EXPECTED_MAKEFILE = """.PHONY: build check lint test
 
-override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+override empty :=
+override space := $(empty) $(empty)
+override makefile_space := __IOS_BATTERY_MAKEFILE_SPACE__
+override encoded_makefile_list := $(patsubst $(makefile_space)%,%,$(subst $(space),$(makefile_space),$(MAKEFILE_LIST)))
+override ROOT := $(subst $(makefile_space),$(space),$(abspath $(dir $(lastword $(encoded_makefile_list)))))
 
 lint: check
 
@@ -70,6 +74,7 @@ build: check
 
 check:
 \t@python3 "$(ROOT)/scripts/check-baseline.py"
+\t@python3 "$(ROOT)/scripts/test-make-spaced-path.py"
 """
 
 
@@ -685,7 +690,7 @@ def main():
     require("view appearance" in readme.lower(),
             "README must document battery refresh on view appearance",
             failures)
-    require("absolute Makefile path" in readme and "any working directory" in readme,
+    require("absolute Makefile path" in readme and "any working directory" in readme and "paths containing spaces" in readme,
             "README must document location-independent verification", failures)
     require("local-only" in readme.lower() and "battery" in readme.lower(),
             "README must document local-only battery data expectations",
@@ -872,7 +877,7 @@ def main():
             failures)
     location_statuses = re.findall(r"(?mi)^status:\s*(.+?)\s*$", location_independent_make_plan)
     location_verification = markdown_section(location_independent_make_plan, "Verification Completed")
-    location_required = ("Root and external-directory Make gates passed", "root-derivation mutation failed", "checker-invocation mutation failed", "XCTest-runner mutation failed", "plan-status mutation failed", "plan-evidence mutation failed", "documentation mutation failed")
+    location_required = ("Root and external-directory Make gates passed", "space-containing absolute Makefile paths passed", "root-derivation mutation failed", "checker-invocation mutation failed", "XCTest-runner mutation failed", "plan-status mutation failed", "plan-evidence mutation failed", "documentation mutation failed")
     require(location_statuses == ["completed"] and all(item in location_verification for item in location_required) and not re.search(r"(?i)\b(?:pending|todo|tbd|not run)\b", location_verification),
             "location-independent Make plan must record completed verification", failures)
     presentation_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", presentation_plan)
