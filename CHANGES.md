@@ -33,11 +33,14 @@ loaded-file metadata that could redirect or replace repository verification.
 
 ### Blockers
 
+- Required `codex review --base origin/master` was attempted on head `908804c`
+  but failed before analysis with OpenAI HTTP 401 authentication errors.
 - Hosted XCTest and CodeQL are required on the final head.
 
 ### Next action
 
-- Attempt exact-head Codex review, then merge only after hosted checks pass.
+- Complete immutable final-head manual review, then merge only after hosted
+  checks pass.
 
 ## 2026-06-26 12:17 PDT - P2 - Reconcile hosted XCTest roadmap
 
