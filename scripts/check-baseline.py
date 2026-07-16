@@ -264,9 +264,16 @@ def main():
     app_plist = parse_plist("ChargeMe/Info.plist", failures)
     test_plist = parse_plist("ChargeMeTests/Info.plist", failures)
     project = read("ChargeMe.xcodeproj/project.pbxproj")
-    view_controller = read("ChargeMe/ViewController.swift")
+    # Assert against the comment-stripped source. This file already builds
+    # strip_swift_line_comments (and self-tests it), and uses it for
+    # swift_function_body extraction and the no-network/no-logging scans -- but the
+    # ~44 membership checks below read the raw text, so commenting a contract out
+    # while leaving its literal in the comment satisfied its own assertion.
+    # ios-touch-id's equivalent gate strips first and correctly rejects that same
+    # mutation; this one did not.
+    view_controller = strip_swift_line_comments(read("ChargeMe/ViewController.swift"))
     tests = read("ChargeMeTests/ChargeMeTests.swift")
-    active_view_controller = strip_swift_line_comments(view_controller)
+    active_view_controller = view_controller
     active_sources = "\n".join([
         strip_swift_line_comments(read("ChargeMe/AppDelegate.swift")),
         strip_swift_line_comments(view_controller),
@@ -410,11 +417,32 @@ def main():
             "displayBatteryLevel(readBatteryLevel())" not in view_did_load,
             "ViewController must configure without sampling during viewDidLoad",
             failures)
+    # Pin what makes the label actually visible, not just that the word
+    # NSLayoutConstraint appears somewhere. This asserted a single occurrence, so
+    # deleting either centering constraint left the other one satisfying the
+    # substring, and nothing asserted the autoresizing mask at all. No XCTest
+    # covers layout either (zero matches for Constraint/frame/bounds/isHidden in
+    # ChargeMeTests.swift), so this gate is the only thing standing between the
+    # documented "visible battery level" guarantee and a label with no position.
+    configure_label = swift_function_body(
+        active_view_controller, "func configureBatteryLevelLabel"
+    )
     require("let batteryLevelLabel = UILabel()" in view_controller and
             "func configureBatteryLevelLabel()" in view_controller and
-            "batteryLevelLabel.accessibilityLabel = \"Battery Level\"" in view_controller and
-            "NSLayoutConstraint(item: batteryLevelLabel" in view_controller,
+            "batteryLevelLabel.accessibilityLabel = \"Battery Level\"" in view_controller,
             "ViewController must expose a local visible battery-level label",
+            failures)
+    require("batteryLevelLabel.translatesAutoresizingMaskIntoConstraints = false"
+            in configure_label,
+            "battery-level label must opt out of the autoresizing mask before "
+            "constraints are applied",
+            failures)
+    require("view.addConstraints" in configure_label
+            and "attribute: .centerX" in configure_label
+            and "attribute: .centerY" in configure_label
+            and configure_label.count("NSLayoutConstraint(item: batteryLevelLabel") == 2,
+            "battery-level label must keep both centering constraints so it has a "
+            "position on screen",
             failures)
     require("func displayBatteryLevel(_ batteryLevel: Float?)" in view_controller and
             "batteryLevelLabel.text = batteryLevelText(batteryLevel)" in view_controller and
